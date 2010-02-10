@@ -18,12 +18,11 @@
 
     <!-- Artifact Information  -->
     <groupId>org.jboss.ejb3.singleton</groupId>
-    <artifactId>jboss-ejb3-singleton-legacy-container-int</artifactId>
+    <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
     <packaging>jar</packaging>
-    <name>JBoss EJB3.1 @Singleton container integration with the AOP based containers</name>
+    <name>JBoss EJB3.1 @Singleton container AOP implementation</name>
     <url>http://www.jboss.org</url>
-    <description>An integration of the new jboss-ejb3-singleton-spi based singleton container with the
-    older AOP based containers</description>
+    <description>An AOP based (delegating) implementation of the singleton container</description>
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>

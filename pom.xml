@@ -42,9 +42,9 @@
     <modules>
         <!--  Order matters -->
         <module>build</module>
-	<module>spi</module>
+	    <module>spi</module>
         <module>impl</module>
-	<module>legacy-container-integration</module>
+	    <module>aop-impl</module>
     </modules>
 
 </project>
