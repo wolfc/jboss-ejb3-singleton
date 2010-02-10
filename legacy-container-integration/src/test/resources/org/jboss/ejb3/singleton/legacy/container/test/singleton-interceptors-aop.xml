@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<aop xmlns="urn:jboss:aop-beans:1.0">
+
+   <interceptor class="org.jboss.aspects.remoting.InvokeRemoteInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.security.client.SecurityClientInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.aspects.tx.ClientTxPropagationInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.remoting.IsLocalInterceptor" scope="PER_VM"/>
+
+   <!--  <interceptor class="org.jboss.aspects.tx.TxPropagationInterceptor" scope="PER_VM"/> -->
+
+
+
+   <interceptor class="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.ENCPropagationInterceptor" scope="PER_VM"/>
+   <interceptor name="Basic Authorization" factory="org.jboss.ejb3.security.RoleBasedAuthorizationInterceptorFactory" scope="PER_CLASS"/>
+   <interceptor name="JACC Authorization" factory="org.jboss.ejb3.security.JaccAuthorizationInterceptorFactory" scope="PER_CLASS"/>
+   <interceptor factory="org.jboss.ejb3.security.AuthenticationInterceptorFactory" scope="PER_CLASS"/>
+   <interceptor factory="org.jboss.ejb3.security.RunAsSecurityInterceptorFactory" scope="PER_CLASS"/>
+   <interceptor class="org.jboss.ejb3.entity.ExtendedPersistenceContextPropagationInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.stateful.SessionSynchronizationInterceptor" scope="PER_VM"/>
+   <!-- 
+   <interceptor factory="org.jboss.ejb3.tx.BMTTxInterceptorFactory" scope="PER_CLASS_JOINPOINT"/>
+   <interceptor factory="org.jboss.ejb3.tx.CMTTxInterceptorFactory" scope="PER_CLASS_JOINPOINT"/>
+   -->
+   <interceptor class="org.jboss.ejb3.AllowedOperationsInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor" scope="PER_VM"/>
+   <interceptor class="org.jboss.ejb3.BlockContainerShutdownInterceptor" scope="PER_VM"/>
+   <interceptor factory="org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory" scope="PER_CLASS"/>
+    <interceptor class="org.jboss.ejb3.interceptor.EJB3TCCLInterceptor" scope="PER_VM"/>
+
+   <aspect name="InjectInterceptorsFactory" factory="org.jboss.ejb3.interceptors.aop.InjectInterceptorsFactory" scope="PER_JOINPOINT"/>
+   <aspect name="InvocationContextInterceptor" class="org.jboss.ejb3.interceptors.aop.InvocationContextInterceptor" scope="PER_VM"/>
+
+   <domain name="Intercepted Bean">
+      <pointcut name="beanAroundInvokeCallbackMethods" expr="execution(* @org.jboss.ejb3.interceptors.ManagedObject->@javax.interceptor.AroundInvoke(..))"/>
+      <pointcut name="beanPostConstructCallbackMethods" expr="execution(* @org.jboss.ejb3.interceptors.ManagedObject->@javax.interceptor.PostConstruct(..))"/>
+      <pointcut name="beanPreDestroyCallbackMethods" expr="execution(* @org.jboss.ejb3.interceptors.ManagedObject->@javax.interceptor.PreDestroy(..))"/>
+
+      <pointcut name="beanLifecycleCallbackMethods" expr="beanAroundInvokeCallbackMethods OR beanPostConstructCallbackMethods OR beanPreDestroyCallbackMethods"/>
+
+
+      <!-- Setup AOP interceptors based on spec interceptors -->
+      <bind pointcut="construction(@org.jboss.ejb3.interceptors.ManagedObject->new(..))">
+         <!-- interceptor-ref name="LoggingInterceptor"/ -->
+         <!-- TODO: we don't need invocation context here -->
+         <!-- TODO: we do until we've seperated the post constructs -->
+         <advice name="setup" aspect="InvocationContextInterceptor"/>
+      </bind>
+
+      <stack name="EJBInterceptors">
+         <interceptor-ref name="org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory"/>
+
+         <advice name="setup" aspect="InvocationContextInterceptor"/>
+         <advice name="fillMethod" aspect="InvocationContextInterceptor"/>
+         <advice name="aroundInvoke" aspect="InjectInterceptorsFactory"/>
+      </stack>
+
+      <bind pointcut="execution(public * *->*(..))">
+        <interceptor-ref name="org.jboss.ejb3.interceptor.EJB3TCCLInterceptor"/>
+         <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
+         <interceptor-ref name="org.jboss.ejb3.BlockContainerShutdownInterceptor"/>
+      </bind>
+
+      <stack name="LifecycleCallbackStack">
+         <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
+         <advice name="setup" aspect="InvocationContextInterceptor"/>
+      </stack>
+   </domain>
+
+
+
+   <domain name="Singleton Bean" extends="Intercepted Bean" inheritBindings="true">
+      <bind pointcut="execution(public * *->*(..))">
+         <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
+         <interceptor-ref name="org.jboss.ejb3.security.AuthenticationInterceptorFactory"/>
+      </bind>
+      <bind pointcut="execution(public * @org.jboss.ejb3.annotation.SecurityDomain->*(..))">
+         <interceptor-ref name="Basic Authorization"/>
+      </bind>
+      <bind pointcut="execution(public * *->*(..))">
+         <interceptor-ref name="org.jboss.ejb3.security.RunAsSecurityInterceptorFactory"/>
+      </bind>
+      <bind pointcut="execution(public * *->*(..))">
+         <!--  <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/> 
+         <interceptor-ref name="org.jboss.ejb3.tx.CMTTxInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
+         <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> -->
+         <stack-ref name="EJBInterceptors"/>
+      </bind>
+   </domain>
+<!--    <domain name="Singleton Bean">
+      <bind pointcut="execution(public * *->*(..))">
+        <interceptor-ref name="org.jboss.ejb3.interceptor.EJB3TCCLInterceptor"/>
+      </bind>
+      
+   </domain>
+ -->
+   
+
+</aop>

@@ -27,7 +27,7 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	<version.ejb3.core>1.2.0</version.ejb3.core>
+	    <version.ejb3.core>1.2.0</version.ejb3.core>
     </properties>
     
     <dependencies>
@@ -51,6 +51,69 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+        </dependency>
+        
+        <!-- Get rid of this! it's required for ServiceMBeanSupport class
+            which is being extended by EJB3Deployment -->
+        <dependency>
+          <groupId>org.jboss.jbossas</groupId>
+          <artifactId>jboss-as-system-jmx</artifactId>
+          <version>5.1.0.GA</version>
+          <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jboss.microcontainer</groupId>
+                    <artifactId>jboss-kernel</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.man</groupId>
+                    <artifactId>jboss-managed</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.man</groupId>
+                    <artifactId>jboss-metatype</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss</groupId>
+                    <artifactId>jboss-vfs</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <!-- this needs to be removed - EJBTHREE-1343 -->
+        <dependency>
+          <groupId>org.jboss.jbossas</groupId>
+          <artifactId>jboss-as-server</artifactId>
+          <version>5.1.0.GA</version>
+          <exclusions>
+            <exclusion>
+              <groupId>jboss</groupId>
+              <artifactId>jboss-remoting</artifactId>
+            </exclusion>
+            <!-- jboss-as-server must not dictate the JPA API -->
+            <exclusion>
+              <groupId>org.hibernate</groupId>
+              <artifactId>ejb3-persistence</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.jboss</groupId>
+              <artifactId>jboss-metadata</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.jboss.jbossas</groupId>
+              <artifactId>jboss-as-security</artifactId>
+            </exclusion>
+            <!-- Conflicts with org.jboss.security:jbosssx -->
+            <exclusion>
+              <groupId>org.jboss.security</groupId>
+              <artifactId>jbosssx-client</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.jboss.ws.native</groupId>
+              <artifactId>jbossws-native-jaxws</artifactId>
+            </exclusion>
+          </exclusions>
+          <scope>test</scope>
         </dependency>
     
     </dependencies>

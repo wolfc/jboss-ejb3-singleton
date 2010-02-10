@@ -21,10 +21,8 @@
 */
 package org.jboss.ejb3.singleton.impl.container;
 
-import java.lang.reflect.Method;
-
 import org.jboss.ejb3.container.spi.BeanContext;
-import org.jboss.ejb3.container.spi.ContainerInvocationContext;
+import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
@@ -51,7 +49,7 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
     * Logger
     */
    private static Logger logger = Logger.getLogger(SingletonContainer.class);
-   
+
    /**
     * Bean implementation class 
     */
@@ -74,16 +72,21 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
 
    /**
     * Creates a {@link SingletonContainer} for the EJB class <code>beanClass</code>
-    * and the associated session bean metadata <code>sessionBeanMetaData</code>
-    *  
-    * @param beanClass The EJB implementation class
+    * and the associated session bean metadata <code>sessionBeanMetaData</code>. The
+    * <code>interceptorRegistry</code> will be used for intercepting the calls on the 
+    * target bean instance
+    * 
+    * @param beanClass The EJB implementation class 
     * @param sessionBeanMetaData The session bean metadata
-    * @throws IllegalArgumentException If either <code>beanClass</code> or <code>sessionBeanMetaData</code> 
-    *                               is null.
+    * @param interceptorRegistry The interceptor registry which will be used to intercept
+    *               the calls to the target bean instance during the invocation on the container 
+    *               ({@link #invoke(ContainerInvocation)})
+    * @throws IllegalArgumentException If any of the passed parameters is null.
     * @throws IllegalStateException If the <code>sesssionBeanMetadata</code> does not represent a singleton
-    *               bean - which is checked by a call to {@link JBossSessionBean31MetaData#isSingleton()}
+    *               bean - which is checked by a call to {@link JBossSessionBean31MetaData#isSingleton()}                
     */
-   public SingletonContainer(Class<?> beanClass, JBossSessionBean31MetaData sessionBeanMetaData)
+   public SingletonContainer(Class<?> beanClass, JBossSessionBean31MetaData sessionBeanMetaData,
+         InterceptorRegistry interceptorRegistry)
    {
       if (beanClass == null || sessionBeanMetaData == null)
       {
@@ -97,43 +100,60 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
          throw new IllegalStateException("Bean named " + sessionBeanMetaData.getEjbName() + " with class "
                + sessionBeanMetaData.getEjbClass() + " is NOT a singleton bean");
       }
-
-      this.beanClass = beanClass;
-      this.sessionBeanMetaData = sessionBeanMetaData;
-
-      // create instance manager
-      this.instanceManager = new SingletonEJBInstanceManagerImpl(beanClass, this);
-      // create an empty interceptor registry
-      this.interceptorRegistry = new EmptyInterceptorRegistry();
-   }
-
-   /**
-    * Creates a {@link SingletonContainer} for the EJB class <code>beanClass</code>
-    * and the associated session bean metadata <code>sessionBeanMetaData</code>. The
-    * <code>interceptorRegistry</code> will be used for intercepting the calls on the 
-    * target bean instance
-    * 
-    * @param beanClass The EJB implementation class 
-    * @param sessionBeanMetaData The session bean metadata
-    * @param interceptorRegistry The interceptor registry which will be used to intercept
-    *               the calls to the target bean instance during the invocation on the container 
-    *               ({@link #invoke(ContainerInvocationContext)})
-    * @throws IllegalArgumentException If any of the passed parameters is null.
-    * @throws IllegalStateException If the <code>sesssionBeanMetadata</code> does not represent a singleton
-    *               bean - which is checked by a call to {@link JBossSessionBean31MetaData#isSingleton()}                
-    */
-   public SingletonContainer(Class<?> beanClass, JBossSessionBean31MetaData sessionBeanMetaData,
-         InterceptorRegistry interceptorRegistry)
-   {
-      this(beanClass, sessionBeanMetaData);
       if (interceptorRegistry == null)
       {
          throw new IllegalArgumentException(SingletonContainer.class.getSimpleName()
                + " cannot be constructed out of a null interceptor registry");
       }
+
+      this.beanClass = beanClass;
+      this.sessionBeanMetaData = sessionBeanMetaData;
+
+      // create instance manager
+      this.instanceManager = new SingletonEJBInstanceManagerImpl(beanClass, this, this);
+      // set the interceptor registry
       this.interceptorRegistry = interceptorRegistry;
+      
+      
+   }
+   
+   /**
+    * TODO: Think whether this needs to be made available in 
+    * a lifecycle aware {@link EJBContainer} 
+    */
+   public void create()
+   {
+      
    }
 
+   /**
+    * TODO: Think whether this needs to be made available in 
+    * a lifecycle aware {@link EJBContainer} 
+    */
+   public void start()
+   {
+      // TODO: If @Startup, then create a singleton bean context here
+      
+   }
+   
+   /**
+    * TODO: Think whether this needs to be made available in 
+    * a lifecycle aware {@link EJBContainer} 
+    */
+   public void stop()
+   {
+      
+   }
+
+   /**
+    * TODO: Think whether this needs to be made available in 
+    * a lifecycle aware {@link EJBContainer} 
+    */
+   public void destroy()
+   {
+      this.instanceManager.destroy();
+   }
+   
    /**
     * @see org.jboss.ejb3.container.spi.EJBContainer#getBeanInstanceManager()
     */
@@ -181,10 +201,10 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
    }
 
    /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#invoke(org.jboss.ejb3.container.spi.ContainerInvocationContext)
+    * @see org.jboss.ejb3.container.spi.EJBContainer#invoke(org.jboss.ejb3.container.spi.ContainerInvocation)
     */
    @Override
-   public Object invoke(ContainerInvocationContext containerInvocation) throws Exception
+   public Object invoke(ContainerInvocation containerInvocation) throws Exception
    {
       BeanContext beanContext = this.instanceManager.get();
 
@@ -205,75 +225,27 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
    }
 
    /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#getEJBLifecycleHandler()
-    */
-   @Override
-   public EJBLifecycleHandler getEJBLifecycleHandler()
-   {
-      return this;
-   }
-
-   /**
     * @see org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler#postConstruct(org.jboss.ejb3.container.spi.BeanContext)
     */
    @Override
-   public void postConstruct(BeanContext beanContext)
+   public void postConstruct(BeanContext beanContext) throws Exception
    {
-      // TODO: Implement this
-      logger.warn("postConstruct() not yet implemented in " + this.getClass());
+      // pass the bean context to the interceptor registry to do its job.
+      // we don't have anything specific/additional to do here.
+      this.interceptorRegistry.invokePostConstruct(beanContext);
+      
    }
 
    /**
     * @see org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler#preDestroy(org.jboss.ejb3.container.spi.BeanContext)
     */
    @Override
-   public void preDestroy(BeanContext beanContext)
+   public void preDestroy(BeanContext beanContext) throws Exception
    {
-      // TODO: Implement this
-      logger.warn("preDestroy() not yet implemented in " + this.getClass());
+      // pass the bean context to the interceptor registry to do its job.
+      // we don't have anything specific/additional to do here.
+      this.interceptorRegistry.invokePreDestroy(beanContext);
    }
 
-   /**
-    * 
-    * EmptyInterceptorRegistry
-    * 
-    * <p>
-    * An implementation of the {@link InterceptorRegistry}. This does NOT apply any interceptors
-    * to the invocation on the target object during the {@link #intercept(ContainerInvocationContext, Object)}
-    * call. Instead, it directly invokes the method on the target object 
-    * </p>
-    * TODO: This {@link EmptyInterceptorRegistry} probably needs to be in a more better place to be used
-    * commonly by other containers. Probably this class needs to be an API.
-    * 
-    * @author Jaikiran Pai
-    * @version $Revision: $
-    */
-   private class EmptyInterceptorRegistry implements InterceptorRegistry
-   {
-
-      /**
-       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getEJBContainer()
-       */
-      @Override
-      public EJBContainer getEJBContainer()
-      {
-         return SingletonContainer.this;
-      }
-
-      /**
-       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#intercept(ContainerInvocationContext, BeanContext)
-       */
-      @Override
-      public Object intercept(ContainerInvocationContext containerInvocation, BeanContext targetBeanContext) throws Exception
-      {
-         // just directly invoke on the target object
-         Method methodToBeInvoked = containerInvocation.getMethod();
-         Object args[] = containerInvocation.getArgs();
-
-         // invoke
-         return methodToBeInvoked.invoke(targetBeanContext.getBeanInstance(), args);
-      }
-
-   }
-
+   
 }

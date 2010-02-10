@@ -19,50 +19,35 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.impl.container;
+package org.jboss.ejb3.singleton.legacy.container.test;
 
-import java.lang.reflect.Method;
-
-import org.jboss.ejb3.container.spi.ContainerInvocationContext;
+import javax.annotation.PostConstruct;
+import javax.ejb.Singleton;
 
 /**
- * ContainerInvocationContextImpl
+ * SimpleSingletonBean
  *
- * TODO: This needs to be in a better place like a common container impl
- * 
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class ContainerInvocationContextImpl implements ContainerInvocationContext
+@Singleton
+public class SimpleSingletonBean
 {
+   private int count;
 
-   private Method method;
-   
-   private Object[] args;
-   
-   public ContainerInvocationContextImpl(Method method, Object[] args)
+   @PostConstruct
+   public void onConstruct()
    {
-      this.method = method;
-      this.args = args;
+      this.incrementCount();
    }
    
-   /**
-    * @see org.jboss.ejb3.container.spi.ContainerInvocationContext#getArgs()
-    */
-   @Override
-   public Object[] getArgs()
+   public int getCount()
    {
-      return this.args;
+      return this.count;
    }
 
-   /**
-    * @see org.jboss.ejb3.container.spi.ContainerInvocationContext#getMethod()
-    */
-   @Override
-   public Method getMethod()
+   public void incrementCount()
    {
-      return this.method;
+      this.count++;
    }
-
-   
 }

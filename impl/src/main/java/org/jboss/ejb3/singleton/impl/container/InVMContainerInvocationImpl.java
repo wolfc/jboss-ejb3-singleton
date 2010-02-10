@@ -19,59 +19,51 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.legacy.container.integration;
+package org.jboss.ejb3.singleton.impl.container;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.jboss.aop.MethodInfo;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 
 /**
- * AOPBasedContainerInvocationContext
+ * ContainerInvocationContextImpl
  *
+ * TODO: This needs to be in a better place like a common container impl
+ * 
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedContainerInvocationContext implements ContainerInvocation
+public class InVMContainerInvocationImpl implements ContainerInvocation
 {
 
-   private Method unadvisedMethod;
-
+   private Method method;
+   
    private Object[] args;
-
-   private MethodInfo aopMethodInfo;
+   
+   private Serializable sessionId;
    
    private Class<?> businessInterface;
-
-   private Map<Object, Object> responseContextInfo = new HashMap<Object, Object>();
-
-   /**
-    * @param method
-    * @param args
-    */
-   public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args)
+   
+   public InVMContainerInvocationImpl(Method method, Object[] args)
    {
-      this.aopMethodInfo = aopMethodInfo;
+      this.method = method;
       this.args = args;
-
-      // set the unadvised method
-      this.unadvisedMethod = this.aopMethodInfo.getUnadvisedMethod();
-
    }
    
-   /**
-    * @param method
-    * @param args
-    */
-   public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args, Class<?> businessInterface)
+   public InVMContainerInvocationImpl(Method method, Object[] args, Serializable sessionId, Class<?> businessInterface)
    {
-      this(aopMethodInfo, args);
+      this(method,args,sessionId);
       this.businessInterface = businessInterface;
    }
-
+   
+   public InVMContainerInvocationImpl(Method method, Object[] args, Serializable sessionId)
+   {
+      this.method = method;
+      this.args = args;
+      this.sessionId = sessionId;
+   }
+   
    /**
     * @see org.jboss.ejb3.container.spi.ContainerInvocation#getArgs()
     */
@@ -87,23 +79,7 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    @Override
    public Method getMethod()
    {
-      return this.unadvisedMethod;
-   }
-
-   
-   public MethodInfo getMethodInfo()
-   {
-      return this.aopMethodInfo;
-   }
-
-   public Map<Object, Object> getResponseContextInfo()
-   {
-      return this.responseContextInfo;
-   }
-   
-   public void setResponseContextInfo(Map<Object, Object> responseContextInfo)
-   {
-      this.responseContextInfo = responseContextInfo;
+      return this.method;
    }
 
    /**
@@ -112,8 +88,7 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    @Override
    public Serializable getSessionId()
    {
-      // singleton beans don't have a session id
-      return null;
+      return this.sessionId;
    }
 
    /**
@@ -122,7 +97,8 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    @Override
    public Class<?> getInvokedBusinessInterface()
    {
-      // TODO Auto-generated method stub
-      return null;
+      return this.businessInterface;
    }
+
+   
 }

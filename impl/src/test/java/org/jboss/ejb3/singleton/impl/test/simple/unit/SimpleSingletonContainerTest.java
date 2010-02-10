@@ -27,7 +27,11 @@ import static org.junit.Assert.assertSame;
 
 import java.lang.reflect.Method;
 
-import org.jboss.ejb3.container.spi.ContainerInvocationContext;
+import org.jboss.ejb3.container.spi.BeanContext;
+import org.jboss.ejb3.container.spi.ContainerInvocation;
+import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.singleton.impl.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
 import org.jboss.ejb3.singleton.impl.test.simple.SimpleSingletonBean;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
@@ -62,7 +66,8 @@ public class SimpleSingletonContainerTest
       singletonBeanMetadata.setSessionType(SessionType.Singleton);
 
       // create a singleton container
-      this.singletonContainer = new SingletonContainer(SimpleSingletonBean.class, singletonBeanMetadata);
+      this.singletonContainer = new SingletonContainer(SimpleSingletonBean.class, singletonBeanMetadata,
+            new EmptyInterceptorRegistry());
    }
 
    /**
@@ -80,7 +85,7 @@ public class SimpleSingletonContainerTest
       final Object params[] = new Object[]
       {message};
 
-      ContainerInvocationContext containerInvocation = new DummyContainerInvocation(echoMethod, params);
+      ContainerInvocation containerInvocation = new InVMContainerInvocationImpl(echoMethod, params);
 
       Object result = this.singletonContainer.invoke(containerInvocation);
 
@@ -106,7 +111,7 @@ public class SimpleSingletonContainerTest
       final Object params[] = new Object[]
       {};
 
-      ContainerInvocationContext containerInvocation = new DummyContainerInvocation(getMeMethod, params);
+      ContainerInvocation containerInvocation = new InVMContainerInvocationImpl(getMeMethod, params);
       Object result = this.singletonContainer.invoke(containerInvocation);
 
       assertNotNull("Result returned by singleton container was null", result);
@@ -117,7 +122,7 @@ public class SimpleSingletonContainerTest
       // more invocations on the bean and check that the same instance is returned
       for (int i = 0; i < 5; i++)
       {
-         containerInvocation = new DummyContainerInvocation(getMeMethod, params);
+         containerInvocation = new InVMContainerInvocationImpl(getMeMethod, params);
          result = this.singletonContainer.invoke(containerInvocation);
 
          assertNotNull("Result returned by singleton container was null", result);
@@ -145,7 +150,7 @@ public class SimpleSingletonContainerTest
       final Method incrementCountMethod = SimpleSingletonBean.class.getMethod("incrementCount", new Class<?>[]
       {});
 
-      ContainerInvocationContext containerInvocation = new DummyContainerInvocation(getCountMethod, params);
+      ContainerInvocation containerInvocation = new InVMContainerInvocationImpl(getCountMethod, params);
       Object result = this.singletonContainer.invoke(containerInvocation);
 
       assertNotNull("Result returned by singleton container was null", result);
@@ -157,10 +162,10 @@ public class SimpleSingletonContainerTest
       for (int i = 1; i < 10; i++)
       {
          // first increment
-         containerInvocation = new DummyContainerInvocation(incrementCountMethod, params);
+         containerInvocation = new InVMContainerInvocationImpl(incrementCountMethod, params);
          this.singletonContainer.invoke(containerInvocation);
          // get the count
-         containerInvocation = new DummyContainerInvocation(getCountMethod, params);
+         containerInvocation = new InVMContainerInvocationImpl(getCountMethod, params);
          result = this.singletonContainer.invoke(containerInvocation);
 
          assertNotNull("Result returned by singleton container was null", result);
@@ -172,54 +177,70 @@ public class SimpleSingletonContainerTest
       }
    }
 
-   /**
-    * 
-    * DummyContainerInvocation
-    *
-    * A dummy {@link ContainerInvocationContext} used in tests
-    * @author Jaikiran Pai
-    * @version $Revision: $
-    */
-   private class DummyContainerInvocation implements ContainerInvocationContext
+   private class EmptyInterceptorRegistry implements InterceptorRegistry
    {
 
-      private Method method;
-
-      private Object[] args;
-
-      private boolean stateful;
-
-      public DummyContainerInvocation(Method method, Object[] args)
+      /** (non-Javadoc)
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getEJBContainer()
+       */
+      @Override
+      public EJBContainer getEJBContainer()
       {
-         this.method = method;
-         this.args = args;
-      }
-
-      public DummyContainerInvocation(Method method, Object[] args, boolean isStateful)
-      {
-         this(method, args);
-         this.stateful = isStateful;
+         return SimpleSingletonContainerTest.this.singletonContainer;
       }
 
       /**
-       * @see org.jboss.ejb3.container.spi.ContainerInvocationContext#getArgs()
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#intercept(org.jboss.ejb3.container.spi.ContainerInvocation, org.jboss.ejb3.container.spi.BeanContext)
        */
       @Override
-      public Object[] getArgs()
+      public Object intercept(ContainerInvocation containerInvocation, BeanContext targetBeanContext) throws Exception
       {
+         Object target = targetBeanContext.getBeanInstance();
+         Method methodToInvoke = containerInvocation.getMethod();
+         Object[] params = containerInvocation.getArgs();
+         return methodToInvoke.invoke(target, params);
 
-         return this.args;
       }
 
       /**
-       * @see org.jboss.ejb3.container.spi.ContainerInvocationContext#getMethod()
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePostActivate(org.jboss.ejb3.container.spi.BeanContext)
        */
       @Override
-      public Method getMethod()
+      public void invokePostActivate(BeanContext targetBeanContext) throws Exception
       {
-         return this.method;
+         // TODO Auto-generated method stub
+
       }
 
-      
+      /**
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePostConstruct(org.jboss.ejb3.container.spi.BeanContext)
+       */
+      @Override
+      public void invokePostConstruct(BeanContext targetBeanContext) throws Exception
+      {
+         // TODO Auto-generated method stub
+
+      }
+
+      /**
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePreDestroy(org.jboss.ejb3.container.spi.BeanContext)
+       */
+      @Override
+      public void invokePreDestroy(BeanContext targetBeanContext) throws Exception
+      {
+         // TODO Auto-generated method stub
+
+      }
+
+      /**
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePrePassivate(org.jboss.ejb3.container.spi.BeanContext)
+       */
+      @Override
+      public void invokePrePassivate(BeanContext targetBeanContext) throws Exception
+      {
+         // TODO Auto-generated method stub
+
+      }
+
    }
 }

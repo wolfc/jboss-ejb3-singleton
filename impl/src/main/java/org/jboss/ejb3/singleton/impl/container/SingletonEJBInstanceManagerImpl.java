@@ -21,8 +21,11 @@
 */
 package org.jboss.ejb3.singleton.impl.container;
 
+import java.io.Serializable;
+
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
 
@@ -46,6 +49,13 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    private EJBContainer container;
 
    /**
+    * An {@link EJBLifecycleHandler} responsible for handling the
+    * lifecyle of the bean instances created/destroyed by this
+    * {@link EJBInstanceManager}
+    */
+   private EJBLifecycleHandler beanInstanceLifecycleHandler;
+
+   /**
     * The singleton bean context
     */
    private BeanContext singletonBeanContext;
@@ -57,17 +67,19 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     * @param beanClass The bean implementation class
     * @param container The container managing the bean
     */
-   public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container)
+   public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container,
+         EJBLifecycleHandler lifecycleHandler)
    {
       this.beanClass = beanClass;
       this.container = container;
+      this.beanInstanceLifecycleHandler = lifecycleHandler;
    }
 
    /**
     * @see org.jboss.ejb3.container.spi.EJBInstanceManager#create()
     */
    @Override
-   public BeanContext create()
+   public Serializable create()
    {
       if (this.singletonBeanContext == null)
       {
@@ -81,19 +93,25 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
                newInstanceCreated = true;
             }
          }
-         if (newInstanceCreated)
+         if (newInstanceCreated && this.beanInstanceLifecycleHandler != null)
          {
             // do post-construct
-            EJBLifecycleHandler beanLifecycleHandler = this.getEJBContainer().getEJBLifecycleHandler();
-            beanLifecycleHandler.postConstruct(this.singletonBeanContext);
+            try
+            {
+               this.beanInstanceLifecycleHandler.postConstruct(this.singletonBeanContext);
+            }
+            catch (Exception e)
+            {
+               throw new RuntimeException("Could not invoke PostConstruct on the newly created bean instance", e);
+            }
          }
       }
-
-      return this.singletonBeanContext;
+      return this.singletonBeanContext.getSessionId();
    }
 
    /**
-    * @see org.jboss.ejb3.container.spi.EJBInstanceManager#get()
+    * 
+    * @see org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager#get()
     */
    @Override
    public BeanContext get()
@@ -104,6 +122,33 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
       }
       return this.singletonBeanContext;
 
+   }
+   
+   /**
+    * @see org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager#destroy()
+    */
+   @Override
+   public void destroy()
+   {
+      synchronized(this)
+      {
+         if (this.singletonBeanContext == null)
+         {
+            return; // Or should we throw IllegalStateException?
+         }
+      }
+      try
+      {
+         this.beanInstanceLifecycleHandler.preDestroy(this.singletonBeanContext);
+      }
+      catch (Exception e)
+      {
+         throw new RuntimeException("Could not preDestroy the singleton bean instance", e);
+      }
+      synchronized (this)
+      {
+         this.singletonBeanContext = null;
+      }
    }
 
    /**
@@ -116,13 +161,22 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    }
 
    /**
-    * @see org.jboss.ejb3.container.spi.EJBInstanceManager#destroy(org.jboss.ejb3.container.spi.BeanContext)
+    * @see org.jboss.ejb3.container.spi.EJBInstanceManager#destroy(Serializable)
     */
    @Override
-   public void destroy(BeanContext beanContext) throws IllegalArgumentException
+   public void destroy(Serializable sessionId) throws IllegalArgumentException, IllegalStateException
    {
-      // TODO Auto-generated method stub
+      throw new IllegalStateException("destroy(sessionId) cannot be called on a singleton bean's instance manager");
 
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBInstanceManager#isSessionAware()
+    */
+   @Override
+   public boolean isSessionAware()
+   {
+      return false;
    }
 
    /**

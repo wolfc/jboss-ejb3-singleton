@@ -21,6 +21,8 @@
 */
 package org.jboss.ejb3.singleton.impl.container;
 
+import java.io.Serializable;
+
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
 
@@ -72,6 +74,16 @@ public class SingletonBeanContext implements BeanContext
    public EJBContainer getEJBContainer()
    {
       return this.beanContainer;
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.BeanContext#getSessionId()
+    */
+   @Override
+   public Serializable getSessionId()
+   {
+      // singleton bean context is not session specific 
+      return null;
    }
 
 }

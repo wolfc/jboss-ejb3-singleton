@@ -38,8 +38,13 @@ public interface SingletonEJBInstanceManager extends EJBInstanceManager
 {
 
    /**
-    * @return Returns the {@link BeanContext} for the singleton bean.
+    * @return Returns the {@link BeanContext} of the singleton bean.
     *  
     */
    BeanContext get();
+   
+   /**
+    * Destroy the {@link BeanContext} of the singleton bean
+    */
+   void destroy();
 }

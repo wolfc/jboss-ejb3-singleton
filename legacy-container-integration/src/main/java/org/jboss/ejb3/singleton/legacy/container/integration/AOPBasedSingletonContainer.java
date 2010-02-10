@@ -22,8 +22,6 @@
 package org.jboss.ejb3.singleton.legacy.container.integration;
 
 import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Hashtable;
 import java.util.Map;
@@ -41,8 +39,9 @@ import org.jboss.aop.util.MethodHashing;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Ejb3Deployment;
 import org.jboss.ejb3.common.lang.SerializableMethod;
-import org.jboss.ejb3.container.spi.ContainerInvocationContext;
+import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
@@ -66,7 +65,7 @@ import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements InjectionContainer
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements InjectionContainer, EJBContainer
 {
 
    /**
@@ -79,11 +78,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * delegate the calls to
     */
    private SingletonContainer simpleSingletonContainer;
-
-   /**
-    * (Legacy) Bean context
-    */
-   private BeanContext<?> beanContext;
 
    /**
     * @param cl
@@ -107,11 +101,17 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       this.simpleSingletonContainer = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
    }
 
-   public SingletonContainer getSingletonContainer()
-   {
-      return this.simpleSingletonContainer;
-   }
 
+   /**
+    * @see org.jboss.ejb3.EJBContainer#create()
+    */
+   @Override
+   public void create() throws Exception
+   {
+      super.create();
+      this.simpleSingletonContainer.create();
+   }
+   
    /**
     * @see org.jboss.ejb3.session.SessionSpecContainer#lockedStart()
     */
@@ -120,7 +120,29 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       super.lockedStart();
 
-      // create singleton bean context
+      // pass on the control to our simple singleton container
+      this.simpleSingletonContainer.start();
+   }
+
+   /**
+    * @see org.jboss.ejb3.session.SessionSpecContainer#lockedStop()
+    */
+   @Override
+   protected void lockedStop() throws Exception
+   {
+      super.lockedStop();
+      this.simpleSingletonContainer.stop();
+   }
+   
+   /**
+    * @see org.jboss.ejb3.EJBContainer#destroy()
+    */
+   @Override
+   public void destroy() throws Exception
+   {
+      this.simpleSingletonContainer.destroy();
+      // let the super do the rest
+      super.destroy();
    }
 
    /**
@@ -217,7 +239,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       }
       SerializableMethod serializableMethod = new SerializableMethod(method, invokedBusinessInterface);
       // create a container invocation
-      ContainerInvocationContext containerInvocation = new AOPBasedContainerInvocationContext(methodInfo, args);
+      ContainerInvocation containerInvocation = new AOPBasedContainerInvocationContext(methodInfo, args);
 
       try
       {
@@ -234,24 +256,25 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
 
    }
 
-   /* (non-Javadoc)
+   /**
+    * This method returns null, because binding of proxies into JNDI is done
+    * by a separate module, outside of the singleton container implementation
+    * 
     * @see org.jboss.ejb3.session.SessionContainer#getJndiRegistrarBindName()
     */
    @Override
    protected String getJndiRegistrarBindName()
    {
-      // TODO Auto-generated method stub
       return null;
    }
 
-   /* (non-Javadoc)
+   /**
     * @see org.jboss.ejb3.session.SessionContainer#localHomeInvoke(java.lang.reflect.Method, java.lang.Object[])
     */
    @Override
    public Object localHomeInvoke(Method method, Object[] args) throws Throwable
    {
-      // TODO Auto-generated method stub
-      return null;
+      throw new UnsupportedOperationException("NYI");
    }
 
    /* (non-Javadoc)
@@ -260,8 +283,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public Object localInvoke(Object id, Method method, Object[] args) throws Throwable
    {
-      // TODO Auto-generated method stub
-      return null;
+      throw new UnsupportedOperationException("NYI");
    }
 
    /* (non-Javadoc)
@@ -270,7 +292,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    protected void removeHandle(Handle handle) throws Exception
    {
-      // TODO Auto-generated method stub
+      throw new UnsupportedOperationException("NYI");
 
    }
 
@@ -280,9 +302,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public BeanContext<?> createBeanContext()
    {
-      EJBInstanceManager instanceManager = this.simpleSingletonContainer.getBeanInstanceManager();
-      org.jboss.ejb3.container.spi.BeanContext context = instanceManager.create();
-      return new LegacySingletonBeanContext(this, context);
+      throw new UnsupportedOperationException("createBeanContext() is no longer supported");
    }
 
    /**
@@ -291,8 +311,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public Object getMBean()
    {
-      // TODO Auto-generated method stub
-      return null;
+      throw new UnsupportedOperationException("NYI");
    }
 
    /**
@@ -301,8 +320,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public TimerService getTimerService()
    {
-      // TODO Auto-generated method stub
-      return null;
+      throw new UnsupportedOperationException("NYI");
    }
 
    /**
@@ -311,66 +329,69 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public TimerService getTimerService(Object key)
    {
-      // TODO Auto-generated method stub
-      return null;
+      throw new UnsupportedOperationException("NYI");
    }
 
-   /* (non-Javadoc)
-    * @see org.jboss.injection.InjectionContainer#getAnnotation(java.lang.Class, java.lang.Class)
+   /**
+    * @see EJBContainer#getEJBName()
     */
    @Override
-   public <T extends Annotation> T getAnnotation(Class<T> annotationType, Class<?> clazz)
+   public String getEJBName()
    {
-      // TODO Auto-generated method stub
-      return null;
+      return this.ejbName;
    }
 
-   /* (non-Javadoc)
-    * @see org.jboss.injection.InjectionContainer#getAnnotation(java.lang.Class, java.lang.Class, java.lang.reflect.Method)
+   /**
+    * @see EJBContainer#getEJBClass()
     */
    @Override
-   public <T extends Annotation> T getAnnotation(Class<T> annotationType, Class<?> clazz, Method method)
+   public String getEJBClass()
    {
-      // TODO Auto-generated method stub
-      return null;
+      return this.beanClassName;
    }
 
-   /* (non-Javadoc)
-    * @see org.jboss.injection.InjectionContainer#getAnnotation(java.lang.Class, java.lang.Class, java.lang.reflect.Field)
+   /**
+    * @see EJBContainer#getBeanInstanceManager()
     */
    @Override
-   public <T extends Annotation> T getAnnotation(Class<T> annotationType, Class<?> clazz, Field field)
+   public EJBInstanceManager getBeanInstanceManager()
    {
-      // TODO Auto-generated method stub
-      return null;
+      return this.simpleSingletonContainer.getBeanInstanceManager();
    }
 
-   public BeanContext<?> getSingletonBeanContext()
+   /**
+    * @see EJBContainer#getDeploymentInfo()
+    */
+   @Override
+   public EJBDeploymentInfo getDeploymentInfo()
    {
-      return this.beanContext;
+      return this.simpleSingletonContainer.getDeploymentInfo();
    }
 
-   protected void initBeanContext() throws RuntimeException
+   /**
+    * @see EJBContainer#invoke(ContainerInvocation)
+    */
+   @Override
+   public Object invoke(ContainerInvocation containerInvocation) throws Exception
    {
-      if (beanContext == null)
+      try
       {
-         synchronized (this)
-         {
-            if (beanContext == null)
-            {
-               beanContext = createBeanContext();
-               pushEnc();
-               try
-               {
-                  beanContext.initialiseInterceptorInstances();
-               }
-               finally
-               {
-                  popEnc();
-               }
-            }
-         }
+         return this.invoke((Serializable) null, containerInvocation.getInvokedBusinessInterface(), containerInvocation.getMethod(), containerInvocation
+               .getArgs());
       }
+      catch (Throwable t)
+      {
+         throw new Exception(t);
+      }
+   }
+
+   /**
+    * @see EJBContainer#getInterceptorRegistry()
+    */
+   @Override
+   public InterceptorRegistry getInterceptorRegistry()
+   {
+      return this.simpleSingletonContainer.getInterceptorRegistry();
    }
 
 }
