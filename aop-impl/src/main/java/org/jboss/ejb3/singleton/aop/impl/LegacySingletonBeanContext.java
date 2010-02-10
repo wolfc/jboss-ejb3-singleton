@@ -19,35 +19,45 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.legacy.container.test;
+package org.jboss.ejb3.singleton.aop.impl;
 
-import javax.annotation.PostConstruct;
-import javax.ejb.Singleton;
+import javax.ejb.EJBContext;
+
+import org.jboss.ejb3.container.spi.BeanContext;
+import org.jboss.ejb3.session.SessionSpecBeanContext;
 
 /**
- * SimpleSingletonBean
+ * LegacySingletonBeanContext
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-@Singleton
-public class SimpleSingletonBean
+public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedSingletonContainer>
 {
-   private int count;
-
-   @PostConstruct
-   public void onConstruct()
-   {
-      this.incrementCount();
-   }
+   private AOPBasedSingletonContainer aopBasedSingletonContainer;
    
-   public int getCount()
+   public LegacySingletonBeanContext(AOPBasedSingletonContainer aopBasedSingletonContainer, BeanContext context)
    {
-      return this.count;
+      super(aopBasedSingletonContainer, context.getBeanInstance());
+      this.aopBasedSingletonContainer = aopBasedSingletonContainer;
    }
 
-   public void incrementCount()
+   /* (non-Javadoc)
+    * @see org.jboss.ejb3.session.SessionBeanContext#getEJBContext()
+    */
+   @Override
+   public EJBContext getEJBContext()
    {
-      this.count++;
+      throw new RuntimeException("Not yet implemented");
+   }
+
+   /* (non-Javadoc)
+    * @see org.jboss.ejb3.BeanContext#remove()
+    */
+   @Override
+   public void remove()
+   {
+      throw new RuntimeException("Not yet implemented");
+      
    }
 }

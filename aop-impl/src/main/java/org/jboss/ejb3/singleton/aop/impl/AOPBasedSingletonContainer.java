@@ -19,7 +19,7 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.legacy.container.integration;
+package org.jboss.ejb3.singleton.aop.impl;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -80,6 +80,16 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    private SingletonContainer simpleSingletonContainer;
 
    /**
+    * Returns the AOP domain name which this container uses
+    * for AOP based processing
+    * @return
+    */
+   public static String getAOPDomainName()
+   {
+      return "Singleton Bean";
+   }
+
+   /**
     * @param cl
     * @param beanClassName
     * @param ejbName
@@ -101,7 +111,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       this.simpleSingletonContainer = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
    }
 
-
    /**
     * @see org.jboss.ejb3.EJBContainer#create()
     */
@@ -111,7 +120,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       super.create();
       this.simpleSingletonContainer.create();
    }
-   
+
    /**
     * @see org.jboss.ejb3.session.SessionSpecContainer#lockedStart()
     */
@@ -133,7 +142,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       super.lockedStop();
       this.simpleSingletonContainer.stop();
    }
-   
+
    /**
     * @see org.jboss.ejb3.EJBContainer#destroy()
     */
@@ -376,8 +385,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       try
       {
-         return this.invoke((Serializable) null, containerInvocation.getInvokedBusinessInterface(), containerInvocation.getMethod(), containerInvocation
-               .getArgs());
+         return this.invoke((Serializable) null, containerInvocation.getInvokedBusinessInterface(), containerInvocation
+               .getMethod(), containerInvocation.getArgs());
       }
       catch (Throwable t)
       {

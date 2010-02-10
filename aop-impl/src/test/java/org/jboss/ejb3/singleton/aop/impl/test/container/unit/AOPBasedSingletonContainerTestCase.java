@@ -19,7 +19,7 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.legacy.container.test;
+package org.jboss.ejb3.singleton.aop.impl.test.container.unit;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
@@ -33,9 +33,10 @@ import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
+import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
+import org.jboss.ejb3.singleton.aop.impl.test.common.MockEJB3Deployment;
+import org.jboss.ejb3.singleton.aop.impl.test.container.SimpleSingletonBean;
 import org.jboss.ejb3.singleton.impl.container.InVMContainerInvocationImpl;
-import org.jboss.ejb3.singleton.legacy.container.integration.AOPBasedSingletonContainer;
-import org.jboss.ejb3.singleton.legacy.container.test.common.MockEJB3Deployment;
 import org.jboss.metadata.annotation.creator.ejb.jboss.JBoss50Creator;
 import org.jboss.metadata.annotation.finder.AnnotationFinder;
 import org.jboss.metadata.annotation.finder.DefaultAnnotationFinder;
@@ -64,7 +65,7 @@ public class AOPBasedSingletonContainerTestCase
    {
       this.bootupNamingServer();
       // load the aop-interceptors
-      String interceptorsFilePath = "org/jboss/ejb3/singleton/legacy/container/test/singleton-interceptors-aop.xml";
+      String interceptorsFilePath = "org/jboss/ejb3/singleton/aop/impl/test/container/singleton-interceptors-aop.xml";
       URL url = Thread.currentThread().getContextClassLoader().getResource(interceptorsFilePath);
       if (url == null)
          throw new IllegalStateException("Can't find " + interceptorsFilePath + " on class loader "
