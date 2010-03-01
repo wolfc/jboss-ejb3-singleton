@@ -29,11 +29,14 @@ import java.util.UUID;
 import javax.naming.Context;
 import javax.naming.NamingException;
 
+import org.jboss.ejb3.common.registrar.spi.Ejb3RegistrarLocator;
+import org.jboss.ejb3.common.registrar.spi.NotBoundException;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.remote.RemotingContainer;
 import org.jboss.ejb3.proxy.spi.ProxyFactory;
 import org.jboss.ejb3.singleton.impl.remoting.JBossRemotingContainer;
 import org.jboss.ejb3.singleton.spi.ContainerRegistry;
+import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBeanMetaData;
 import org.jboss.metadata.ejb.jboss.jndi.resolver.impl.JNDIPolicyBasedJNDINameResolverFactory;
@@ -41,6 +44,8 @@ import org.jboss.metadata.ejb.jboss.jndi.resolver.spi.SessionBeanJNDINameResolve
 import org.jboss.metadata.ejb.jboss.jndipolicy.plugins.DefaultJNDIBindingPolicyFactory;
 import org.jboss.metadata.ejb.jboss.jndipolicy.spi.DefaultJndiBindingPolicy;
 import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
+import org.jboss.remoting.InvokerLocator;
+import org.jboss.remoting.transport.Connector;
 import org.jboss.util.naming.Util;
 
 /**
@@ -55,6 +60,13 @@ public class SingletonBeanRemoteJNDIBinder
    private EJBContainer container;
 
    private JBossSessionBeanMetaData sessionBeanMetadata;
+   
+   private static Logger logger = Logger.getLogger(SingletonBeanRemoteJNDIBinder.class);
+   
+   /**
+    * The name under which the Remoting Connector is bound in MC
+    */
+   private static final String REMOTING_CONNECTOR_MC_BEAN_NAME = "org.jboss.ejb3.RemotingConnector";
 
    public SingletonBeanRemoteJNDIBinder(EJBContainer container)
    {
@@ -114,9 +126,14 @@ public class SingletonBeanRemoteJNDIBinder
       ContainerRegistry.INSTANCE.registerContainer(containerRegistryKey, container);
       // TODO: Obviously should NOT be hardcoded and should not even be here probably
       final String DEFAULT_REMOTING_URL = "socket://0.0.0.0:3873";
+      String invokerLocatorURL  = this.getInvokerLocatorURL(REMOTING_CONNECTOR_MC_BEAN_NAME);
+      if (invokerLocatorURL == null)
+      {
+         invokerLocatorURL = DEFAULT_REMOTING_URL;
+      }
       // create a remoting container
       // TODO: Not the responsibility of a jndibinder, so move this out of here
-      RemotingContainer remotingContainer = new JBossRemotingContainer(containerRegistryKey, DEFAULT_REMOTING_URL);
+      RemotingContainer remotingContainer = new JBossRemotingContainer(containerRegistryKey, invokerLocatorURL);
       // create an invocation handler
       InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(remotingContainer);
 
@@ -153,6 +170,51 @@ public class SingletonBeanRemoteJNDIBinder
             this.sessionBeanMetadata, jndibindingPolicy);
       String defaultRemoteJNDIName = jndiNameResolver.resolveRemoteBusinessDefaultJNDIName(this.sessionBeanMetadata);
       Util.unbind(jndiCtx, defaultRemoteJNDIName);
+   }
+   
+   
+  
+
+   /**
+    * Obtains the client binding for the specified 
+    * invokerName (supplied as the Object Store bind name in
+    * MC)
+    * 
+    * @param invokerName
+    * @return
+    * @throws NotBoundException If the specified invokerName is not bound in MC
+    */
+   private String getInvokerLocatorURL(String invokerName) throws NotBoundException
+   {
+      // Initialize
+      String url = null;
+      Connector connector = null;
+
+      // Lookup the Connector in MC
+      try
+      {
+         connector = Ejb3RegistrarLocator.locateRegistrar().lookup(invokerName, Connector.class);
+      }
+      catch (NotBoundException nbe)
+      {
+         // Log and rethrow
+         logger.warn("Could not find the remoting connector for the specified invoker name, " + invokerName + " in MC");
+         throw nbe;
+      }
+
+      // Use the binding specified by the Connector
+      try
+      {
+         url = connector.getInvokerLocator();
+      }
+      catch (Exception e)
+      {
+         throw new RuntimeException("Could not obtain " + InvokerLocator.class.getSimpleName()
+               + " from EJB3 Remoting Connector", e);
+      }
+
+      // Return
+      return url;
    }
 
 }
