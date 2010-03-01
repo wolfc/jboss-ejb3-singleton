@@ -437,4 +437,5 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return super.getBeanContainer();
    }
 
+   
 }

@@ -27,9 +27,11 @@ import java.net.URL;
 import junit.framework.Assert;
 
 import org.jboss.ejb3.singleton.integration.test.common.AbstractSingletonTestCase;
+import org.jboss.ejb3.singleton.integration.test.interceptor.Echo;
 import org.jboss.ejb3.singleton.integration.test.interceptor.SingletonBeanWithInterceptor;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * SingletonBeanInterceptorTestCase
@@ -69,9 +71,10 @@ public class SingletonBeanInterceptorTestCase extends AbstractSingletonTestCase
     * 
     * @throws Exception
     */
+   @Test
    public void testInterception() throws Exception
    {
-      SingletonBeanWithInterceptor singleton = (SingletonBeanWithInterceptor) this.getInitialContext().lookup(SingletonBeanWithInterceptor.JNDI_NAME);
+      Echo singleton = (Echo) this.getInitialContext().lookup(SingletonBeanWithInterceptor.JNDI_NAME);
       String message = "some message which will be intercepted";
       String expectedInterceptedMessage = message + "-intercepted";
       String result = singleton.echo(message);

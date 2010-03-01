@@ -46,6 +46,14 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    private AOPBasedSingletonContainer aopBasedSingletonContainer;
 
    /**
+    * A hack actually. Ideally this shouldn't be stored in the interceptor
+    * registry and instead be available through {@link AOPBasedSingletonContainer}.
+    * But right now, i don't see any value of adding a public API to 
+    * the {@link AOPBasedSingletonContainer} to expose this {@link LegacySingletonBeanContext}
+    */
+   private LegacySingletonBeanContext legacySingletonBeanContext;
+   
+   /**
     * Construct an {@link AOPBasedInterceptorRegistry} for a {@link AOPBasedSingletonContainer}
     * 
     * @param aopBasedContainer The container for which the interceptor registry is being
@@ -83,17 +91,15 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       AOPBasedContainerInvocationContext aopInvocationContext = (AOPBasedContainerInvocationContext) containerInvocation;
       // form a AOP invocation
       MethodInfo methodInfo = aopInvocationContext.getMethodInfo();
+      
       EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext> invocation = new EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext>(
             aopInvocationContext.getMethodInfo());
       invocation.setAdvisor(methodInfo.getAdvisor());
       invocation.setArguments(containerInvocation.getArgs());
-      // get bean context (we could have used the passed one, but we need org.jboss.ejb3.BeanContext for the 
-      // AOP based invocation. Hence get it from the AOP based container)
-      org.jboss.ejb3.BeanContext<?> singletonBeanContext = new LegacySingletonBeanContext(
-            this.aopBasedSingletonContainer, targetBeanContext);
-      
+      // we ignore the passed bean context and always used the singleton bean context that we have locally
+      // TODO: Rethink on this approach
       // set the target bean context of the AOP invocation
-      invocation.setBeanContext(singletonBeanContext);
+      invocation.setBeanContext(this.legacySingletonBeanContext);
 
       try
       {
@@ -128,14 +134,13 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    public void invokePostConstruct(BeanContext targetBeanContext) throws Exception
    {
       // fallback on legacy AOP based lifecycle impl
-      org.jboss.ejb3.BeanContext<?> legacyBeanContext = new LegacySingletonBeanContext(this.aopBasedSingletonContainer,
-            targetBeanContext);
+      this.legacySingletonBeanContext = new LegacySingletonBeanContext(this.aopBasedSingletonContainer, targetBeanContext);
       // TODO: This passes the bean context through a series of injectors
       // which are responsible for carrying out the injection on the bean context (ex: field based
       // injection like for @PersistenceContext).
       // THIS HAS TO BE IN THE EJBLifecycleHandler SO THAT THE INJECTIONS
       // CAN HAPPEN ON LIFECYCLE EVENTS (LIKE BEAN INSTANTIATION)
-      this.aopBasedSingletonContainer.injectBeanContext(legacyBeanContext);
+      this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
       
       // Note: The method name initialiseInterceptorInstances() gives a 
       // wrong impression. This method not just instantiates a interceptor instance,
@@ -143,10 +148,10 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       // instance for any injectable fields
       // TODO: Ideally, this should be split up into separate instantiation and injection
       // calls.
-      legacyBeanContext.initialiseInterceptorInstances();
+      legacySingletonBeanContext.initialiseInterceptorInstances();
       
       // invoke post construct lifecycle on the bean/interceptor instances
-      this.aopBasedSingletonContainer.invokePostConstruct(legacyBeanContext);
+      this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
 
    }
 

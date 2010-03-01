@@ -21,29 +21,13 @@
 */
 package org.jboss.ejb3.singleton.integration.test.interceptor;
 
-import javax.ejb.Remote;
-import javax.ejb.Singleton;
-import javax.interceptor.Interceptors;
-
-import org.jboss.ejb3.annotation.RemoteBinding;
-
 /**
- * SingletonBeanWithInterceptor
+ * Echo
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-@Interceptors (SimpleInterceptor.class)
-@Singleton
-@RemoteBinding (jndiBinding = SingletonBeanWithInterceptor.JNDI_NAME)
-@Remote (Echo.class)
-public class SingletonBeanWithInterceptor implements Echo 
+public interface Echo
 {
-
-   public static final String JNDI_NAME = "SingletonInterceptorTestBean";
-   
-   public String echo(String message)
-   {
-      return message;
-   }
+   String echo(String message);
 }
