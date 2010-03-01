@@ -30,8 +30,8 @@ import java.util.Map;
 
 import org.jboss.ejb3.DeploymentUnit;
 import org.jboss.ejb3.interceptor.InterceptorInfoRepository;
-import org.jboss.virtual.VirtualFile;
-import org.jboss.virtual.VirtualFileFilter;
+import org.jboss.ejb3.vfs.spi.VirtualFile;
+import org.jboss.ejb3.vfs.spi.VirtualFileFilter;
 
 /**
  * MockDeploymentUnit

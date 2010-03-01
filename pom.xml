@@ -42,9 +42,22 @@
     <modules>
         <!--  Order matters -->
         <module>build</module>
-	    <module>spi</module>
-        <module>impl</module>
-	    <module>aop-impl</module>
+	<module>spi</module>
+    <module>impl</module>
+	<module>aop-impl</module>
+	<module>deployer</module>
+	<module>proxy</module>
     </modules>
+    
+    <profiles>
+        <!--  An integration profile for running the integration testsuite -->
+        <profile>
+            <id>integration</id>
+            <modules>
+                <module>testsuite</module>
+            </modules>
+        </profile>
+    </profiles>
+    
 
 </project>

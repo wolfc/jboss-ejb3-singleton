@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<chapter id="proxy">
+    <title>Proxy for singleton beans</title>
+    <para>
+        The proxies for singleton beans are generated using the proxy-factory SPI. These proxies are then bound to the JNDI through the
+        <xref linkend="jndi-binder">jndi binders</xref>.
+    </para>
+    <sect1>
+        <title>Invocation Handlers</title>
+        <para>
+            These proxies use invocation handlers which interact with a <link linkend="TODO-link">RemotingContainer</link>. The implementations
+            of RemotingContainer are responsible for invoking the real remote container (EJBContainer.invoke(ContainerInvocation)). An example
+            implementation of the RemotingContainer is the <link linkend="TODO-link">JBossRemotingContainer</link> which uses JBoss Remoting2 to
+            invoke on the remote container. Before doing so, it may even run the invocation past some client side interceptors.
+        </para>
+        <note>
+            <para>
+            One of the reasons why the RemotingContainer is named so, instead of naming it a RemotingInvocationHandler is because, it is also
+            responsible for doing tasks like running the invocation past a client side interceptor stack (if any).
+            </para>
+        </note>
+        <note>
+            <para>
+                More on the JBossRemotingContainer implementation can be found here <xref linkend="jbremotingcontainer"/>
+            </para>
+        </note>
+        
+    </sect1>
+</chapter>
+    
+    

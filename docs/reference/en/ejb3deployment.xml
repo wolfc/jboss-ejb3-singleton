@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<chapter id="ejb3deployment">
+                           <title>EJB3Deployment</title>
+    <para>
+        <ulink url="TODO-link">EJB3Deployment</ulink> is a collection of <code>EJBContainer</code>s. Dependency resolution between
+        <code>EJBContainer</code> and other components (like a PersistenceUnit) should happen at the <code>EJB3Deployment</code> level.
+        As such methods like org.jboss.ejb3.EJBContainer.processMetaData() (in the jboss-ejb3-core containers) which setup a dependency policy
+        will no longer be applicable for new containers. 
+    </para>
+    <para>
+        Currently the old containers through the processMetadata method setup a DependencyPolicy. Internally the processMetadata processes
+        the metadata through a set of <code>InjectionHandler</code>s which setup appropriate dependencies and injectors for the container.
+        For the new containers, this will be (slowly) moved out of the containers and instead be done in a deployer which installs the container
+        as a MC bean. The deployer will be responsible for setting up (with the help of appropriate handlers and EJB3Deployment) dependencies
+        for the container. *After* setting up the dependencies on the container, the deployer will deploy the container as a MC bean. See
+        <ulink url="TODO-link">SingletonContainerDeployer</ulink> on how this is done.
+    </para>
+</chapter>

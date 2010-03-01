@@ -26,6 +26,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
@@ -240,6 +242,15 @@ public class SimpleSingletonContainerTest
       {
          // TODO Auto-generated method stub
 
+      }
+
+      /* (non-Javadoc)
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorClasses()
+       */
+      @Override
+      public List<Class<?>> getInterceptorClasses()
+      {
+         return Collections.EMPTY_LIST;
       }
 
    }

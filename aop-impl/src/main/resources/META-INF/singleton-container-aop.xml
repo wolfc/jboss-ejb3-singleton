@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<aop xmlns="urn:jboss:aop-beans:1.0">
+
+   <domain name="Singleton Bean" extends="Intercepted Bean" inheritBindings="true">
+      <bind pointcut="execution(public * *->*(..))">
+         <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
+         <interceptor-ref name="org.jboss.ejb3.security.AuthenticationInterceptorFactory"/>
+      </bind>
+      <bind pointcut="execution(public * @org.jboss.ejb3.annotation.SecurityDomain->*(..))">
+         <interceptor-ref name="Basic Authorization"/>
+      </bind>
+      <bind pointcut="execution(public * *->*(..))">
+         <interceptor-ref name="org.jboss.ejb3.security.RunAsSecurityInterceptorFactory"/>
+      </bind>
+      <bind pointcut="execution(public * *->*(..))">
+         <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/> 
+         <interceptor-ref name="org.jboss.ejb3.tx.CMTTxInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
+         <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
+         <stack-ref name="EJBInterceptors"/>
+      </bind>
+   </domain>
+
+   
+
+</aop>

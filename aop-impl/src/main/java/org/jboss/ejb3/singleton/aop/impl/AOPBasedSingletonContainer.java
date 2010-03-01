@@ -36,14 +36,17 @@ import org.jboss.aop.joinpoint.Invocation;
 import org.jboss.aop.joinpoint.InvocationResponse;
 import org.jboss.aop.joinpoint.MethodInvocation;
 import org.jboss.aop.util.MethodHashing;
+import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Ejb3Deployment;
+import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
 import org.jboss.ejb3.session.SessionSpecContainer;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
@@ -52,7 +55,6 @@ import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 
 /**
- * AOPBasedSingletonContainer
  * <p>
  * A singleton container based on AOP. This container is used to integrate the {@link EJBContainer} with the
  * existing AOP based container framework (mainly the AOP interceptors). Most of the work in this container
@@ -109,6 +111,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
       // create the new jboss-ejb3-container-spi based singleton container
       this.simpleSingletonContainer = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
+
    }
 
    /**
@@ -131,6 +134,15 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
 
       // pass on the control to our simple singleton container
       this.simpleSingletonContainer.start();
+   }
+
+   /**
+    * @see org.jboss.ejb3.EJBContainer#initializePool()
+    */
+   @Override
+   protected void initializePool() throws Exception
+   {
+      // do nothing (we don't have a pool)
    }
 
    /**
@@ -278,6 +290,19 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    }
 
    /**
+    * 
+    * This method returns null, because binding of proxies into JNDI is done
+    * by a separate module, outside of the singleton container implementation
+    * 
+    * @see org.jboss.ejb3.session.SessionContainer#getJndiRegistrar()
+    */
+   @Override
+   protected JndiSessionRegistrarBase getJndiRegistrar()
+   {
+      return null;
+   }
+
+   /**
     * @see org.jboss.ejb3.session.SessionContainer#localHomeInvoke(java.lang.reflect.Method, java.lang.Object[])
     */
    @Override
@@ -401,6 +426,15 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public InterceptorRegistry getInterceptorRegistry()
    {
       return this.simpleSingletonContainer.getInterceptorRegistry();
+   }
+
+   /**
+    * Expose this as public so that the {@link AOPBasedInterceptorRegistry}
+    * can get hold of the legacy AOP based {@link org.jboss.ejb3.interceptors.registry.InterceptorRegistry} 
+    */
+   public BeanContainer getBeanContainer()
+   {
+      return super.getBeanContainer();
    }
 
 }

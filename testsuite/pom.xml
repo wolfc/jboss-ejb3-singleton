@@ -1,0 +1,362 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+
+    <parent>
+        <groupId>org.jboss.ejb3.singleton</groupId>
+        <artifactId>jboss-ejb3-singleton-build</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../build/pom.xml</relativePath>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.jboss.ejb3.singleton</groupId>
+    <artifactId>jboss-ejb3-singleton-testsuite</artifactId>
+
+
+    <name>JBoss EJB3.1 Singleton component Testsuite</name>
+    <description>Testsuite for JBoss EJB3.1 singleton component</description>
+
+    <properties>
+        <jboss.server.config>all</jboss.server.config>
+        <!--
+            The jboss.home "intermediate" property would not have been
+            necessary, if Maven's enforcer plugin supported enforcing
+            setting of a "System" environment variable. Details here
+            http://markmail.org/message/jwfmtrjesuyag7bh This
+            intermediate property is a workaround to use in the enforcer
+            plugin to ensure that the JBOSS_HOME is set. And now that we
+            have an intermediate jboss.home, let's use this throughout
+            the pom instead of JBOSS_HOME.
+        -->
+        <jboss.home>${JBOSS_HOME}</jboss.home>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <!--  Enforce JDK6 -->
+                    <execution>
+                        <id>enforce-jdk6</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>1.6</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+
+                    <!--
+                        Enforce presence of JBOSS_HOME during
+                        pre-intregation-test phase (i.e. during server
+                        startup
+                    -->
+                    <execution>
+                        <id>enforce-jboss-home</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <rules>
+                                <requireProperty>
+                                    <property>jboss.home</property>
+                                    <message>"Please set
+                                        JBOSS_HOME"</message>
+                                </requireProperty>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--  Use the correct "javac" -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <executable>${JAVA_HOME}/bin/javac</executable>
+                </configuration>
+            </plugin>
+
+            <!--
+                Skip unit tests and instead run integration-test. Before
+                running the integration test, start the server and after
+                the tests, stop the server
+            -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- skip unit test -->
+                    <skipTests>true</skipTests>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <printSummary>true</printSummary>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Override the earlier set value to now run integration tests -->
+                            <skipTests>false</skipTests>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Setup the package manager and no-interface package so
+                that it can be installed later into the AS
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <!-- The package manager installer -->
+                                <artifactItem>
+                                    <groupId>org.jboss.ejb3</groupId>
+                                    <artifactId>jboss-ejb3-package-manager</artifactId>
+                                    <classifier>installer</classifier>
+                                    <type>zip</type>
+                                    <outputDirectory>${project.build.directory}/dependencies/package-manager</outputDirectory>
+                                </artifactItem>
+                                <!--
+                                    The singleton packages -->
+								<artifactItem>
+                                    <groupId>org.jboss.ejb3.singleton</groupId>
+                                    <artifactId>jboss-ejb3-singleton-impl</artifactId>
+                                    <classifier>package</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/dependencies/packages</outputDirectory>
+                                </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>org.jboss.ejb3.singleton</groupId>
+                                    <artifactId>jboss-ejb3-singleton-proxy-impl</artifactId>
+                                    <classifier>package</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/dependencies/packages</outputDirectory>
+                                </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>org.jboss.ejb3.singleton</groupId>
+                                    <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
+                                    <classifier>package</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/dependencies/packages</outputDirectory>
+                                </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>org.jboss.ejb3.singleton</groupId>
+                                    <artifactId>jboss-ejb3-singleton-deployer</artifactId>
+                                    <classifier>package</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/dependencies/packages</outputDirectory>
+                                </artifactItem>
+
+                            </artifactItems>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                            <stripVersion>true</stripVersion>
+                            <excludeTransitive>true</excludeTransitive>
+                        </configuration>
+                    </execution>
+                </executions>
+
+            </plugin>
+
+            <!--
+                Install singleton packages in pre-integration-test
+                phase -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>install-singleton-packages</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks> 
+                                <ant antfile="${project.build.directory}/test-classes/build-test.xml" target="install-singleton-packages" /> 
+                            </tasks>
+                        </configuration>
+                    </execution> 
+                </executions> 
+            </plugin>
+            
+            <!--
+                After installing the no-interface package, now start the
+                server in pre-integration-test phase
+            -->
+            <plugin>
+                <groupId>org.jboss.maven.plugins.jbossas</groupId>
+                <artifactId>maven-jboss-as-control-plugin</artifactId>
+                <version>0.1.1</version>
+                <executions>
+                    <!--  Start AS -->
+                    <execution>
+                        <id>start-jboss-as</id>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <serverConfigName>${jboss.server.config}</serverConfigName>
+                            <jvmArgs>
+                                <jvmArg>-Xms128m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=256m</jvmArg>
+                                <jvmArg>-Dorg.jboss.resolver.warning=true</jvmArg>
+                                <jvmArg>-Dsun.rmi.dgc.client.gcInterval=3600000</jvmArg>
+                                <jvmArg>-Dsun.rmi.dgc.server.gcInterval=3600000</jvmArg>
+                                <!-- Temporary, till AS boots without this property JBAS-6744 -->
+                                <jvmArg>-Dxb.builder.useUnorderedSequence=true</jvmArg>
+                            </jvmArgs>
+                            <jboss.test.run>true</jboss.test.run>
+                        </configuration>
+                    </execution>
+
+                    <!--  Stop AS -->
+                    <execution>
+                        <id>stop-jboss-as</id>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                        <phase>post-integration-test</phase>
+                        <configuration>
+                            <serverConfigName>${jboss.server.config}</serverConfigName>
+                            <jboss.test.run>true</jboss.test.run>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <dependencies>
+
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-impl-base</artifactId>
+            <version>1.0.0-alpha-2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.javaee</groupId>
+            <artifactId>jboss-ejb-api_3.1</artifactId>
+            <version>1.0-alpha-1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.naming</groupId>
+            <artifactId>jnpserver</artifactId>
+            <version>5.0.3.GA</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.jbossas</groupId>
+            <artifactId>jboss-as-system-jmx</artifactId>
+            <scope>test</scope>
+            <version>5.1.0.GA</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.jbossas</groupId>
+            <artifactId>jboss-as-ejb3</artifactId>
+            <version>5.1.0.GA</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            TODO: Remove this dependency and instead depend on the
+            components
+        -->
+        <dependency>
+            <groupId>org.jboss.ejb3</groupId>
+            <artifactId>jboss-ejb3_1</artifactId>
+            <scope>test</scope>
+            <version>1.0.2</version>
+            <type>pom</type>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3.singleton</groupId>
+            <artifactId>jboss-ejb3-singleton-impl</artifactId>
+            <version>${project.version}</version>
+            <classifier>package</classifier>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3.singleton</groupId>
+            <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
+            <version>${project.version}</version>
+            <classifier>package</classifier>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.ejb3.singleton</groupId>
+            <artifactId>jboss-ejb3-singleton-proxy-impl</artifactId>
+            <version>${project.version}</version>
+            <classifier>package</classifier>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.ejb3.singleton</groupId>
+            <artifactId>jboss-ejb3-singleton-deployer</artifactId>
+            <version>${project.version}</version>
+            <classifier>package</classifier>
+            <scope>test</scope>
+        </dependency>                
+
+        <!--
+            The package manager installer which we use to install the
+            no-interface package into AS
+        -->
+        <dependency>
+            <groupId>org.jboss.ejb3</groupId>
+            <artifactId>jboss-ejb3-package-manager</artifactId>
+            <version>1.0.0-alpha-2</version>
+            <scope>test</scope>
+            <classifier>installer</classifier>
+            <type>zip</type>
+        </dependency>
+
+
+    </dependencies>
+
+</project>

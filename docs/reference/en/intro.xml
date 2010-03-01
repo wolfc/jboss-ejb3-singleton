@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<chapter id="Introduction">
+                      <title>Introduction</title>
+                      <para> The singleton container implementation follows the new SPI for EJB3
+                                            containers. The SPI is currently work-in-progress and is
+                                            located <ulink
+                                                  url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/container/trunk/" 
+                                                  >here</ulink>. The goal of the singleton container
+                                            implementation is to: <itemizedlist>
+                                                  <listitem>Implement the singleton container
+                                                  following the new SPI</listitem>
+                                                  <listitem>Use the existing AOP based interceptors
+                                                  and other container infrastructure that exists in
+                                                  the jboss-ejb3-core module </listitem>
+                                            </itemizedlist>
+                      </para>
+</chapter>

@@ -30,7 +30,7 @@ import org.jboss.aop.MethodInfo;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 
 /**
- * AOPBasedContainerInvocationContext
+ * A AOP based implementation of {@link ContainerInvocation} 
  *
  * @author Jaikiran Pai
  * @version $Revision: $
@@ -38,19 +38,37 @@ import org.jboss.ejb3.container.spi.ContainerInvocation;
 public class AOPBasedContainerInvocationContext implements ContainerInvocation
 {
 
+   /**
+    * Unadvised method
+    */
    private Method unadvisedMethod;
 
+   /**
+    * The method arguments
+    */
    private Object[] args;
 
+   /**
+    * AOP method info
+    */
    private MethodInfo aopMethodInfo;
    
+   /**
+    * The business interface on which the method was invoked
+    */
    private Class<?> businessInterface;
 
+   /**
+    * Response context (legacy AOP stuff), used to pass around
+    * the response
+    */
    private Map<Object, Object> responseContextInfo = new HashMap<Object, Object>();
 
    /**
-    * @param method
-    * @param args
+    * Creates a {@link AOPBasedContainerInvocationContext}
+    * 
+    * @param method The AOP method
+    * @param args The arguments to the method
     */
    public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args)
    {
@@ -63,8 +81,11 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    }
    
    /**
-    * @param method
-    * @param args
+    * Constructs a {@link AOPBasedContainerInvocationContext}
+    * 
+    * @param method The AOP method
+    * @param args Arguments to the method
+    * @param businessInterface The business interface on which the method was invoked
     */
    public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args, Class<?> businessInterface)
    {
@@ -90,23 +111,37 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
       return this.unadvisedMethod;
    }
 
-   
+   /**
+    * Returns the AOP {@link MethodInfo}
+    * @return
+    */
    public MethodInfo getMethodInfo()
    {
       return this.aopMethodInfo;
    }
 
+   /**
+    * Returns the response context information
+    * @return
+    */
    public Map<Object, Object> getResponseContextInfo()
    {
       return this.responseContextInfo;
    }
    
+   /**
+    * Sets the response context information
+    * 
+    * @param responseContextInfo Response context
+    */
    public void setResponseContextInfo(Map<Object, Object> responseContextInfo)
    {
       this.responseContextInfo = responseContextInfo;
    }
 
    /**
+    * Returns null, since invocations on singleton containers don't have sessions.
+    * 
     * @see org.jboss.ejb3.container.spi.ContainerInvocation#getSessionId()
     */
    @Override

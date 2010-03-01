@@ -40,6 +40,7 @@ public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedS
    {
       super(aopBasedSingletonContainer, context.getBeanInstance());
       this.aopBasedSingletonContainer = aopBasedSingletonContainer;
+      
    }
 
    /* (non-Javadoc)

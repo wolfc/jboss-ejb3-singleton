@@ -26,8 +26,35 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.2.0</version.ejb3.core>
+	    <version.ejb3.core>1.2.3</version.ejb3.core>
+        <version.ejb3.vfs.impl>1.0.0-alpha-1</version.ejb3.vfs.impl>
     </properties>
+    
+    <build>
+        <plugins>
+            <!-- Assembly Plugin -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-4</version>
+                <executions>
+                    <!--  Build singleton aop "package" -->
+                  <execution>
+                    <id>build-singleton-aop-package</id> 
+                    <phase>package</phase>
+                    <goals>
+                      <goal>single</goal>
+                    </goals>
+                  </execution>
+                </executions>
+                <configuration>
+                  <descriptors>
+                    <descriptor>src/assembly/package-assembler.xml</descriptor>
+                  </descriptors>
+                </configuration>
+            </plugin>
+        </plugins>
+    
+    </build>
     
     <dependencies>
         
@@ -42,23 +69,13 @@
 		<artifactId>jboss-ejb3-core</artifactId>
 		<version>${version.ejb3.core}</version>
 	</dependency>
-
-        
-        <!-- ***************************** -->
-        <!--  Test dependencies -->
-        <!-- ***************************** -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
-        
-        <!-- Get rid of this! it's required for ServiceMBeanSupport class
+    
+    <!-- Get rid of this! it's required for ServiceMBeanSupport class
             which is being extended by EJB3Deployment -->
         <dependency>
           <groupId>org.jboss.jbossas</groupId>
           <artifactId>jboss-as-system-jmx</artifactId>
           <version>5.1.0.GA</version>
-          <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.jboss.microcontainer</groupId>
@@ -78,6 +95,22 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <dependency>
+            <groupId>org.jboss.ejb3.vfs</groupId>
+            <artifactId>jboss-ejb3-vfs-impl-vfs2</artifactId>
+            <version>${version.ejb3.vfs.impl}</version>
+        </dependency>
+        
+        <!-- ***************************** -->
+        <!--  Test dependencies -->
+        <!-- ***************************** -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        
+        
         
         <!-- this needs to be removed - EJBTHREE-1343 -->
         <dependency>
@@ -114,7 +147,17 @@
           </exclusions>
           <scope>test</scope>
         </dependency>
+        
+        <!-- ***************************** -->
+        <!--  Runtime dependencies -->
+        <!-- ***************************** -->
     
+        <dependency>
+            <groupId>org.jboss.ejb3.timeout</groupId>
+            <artifactId>jboss-ejb3-timeout-3.0</artifactId>
+            <version>0.1.1</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
 </project>	

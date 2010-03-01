@@ -28,6 +28,7 @@
         <version.ejb3.container.spi>1.0.0-SNAPSHOT</version.ejb3.container.spi>
     </properties>
     
+
     <dependencies>
         
         <dependency>
