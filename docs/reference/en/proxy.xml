@@ -9,9 +9,13 @@
     <sect1>
         <title>Invocation Handlers</title>
         <para>
-            These proxies use invocation handlers which interact with a <link linkend="TODO-link">RemotingContainer</link>. The implementations
+            These proxies use invocation handlers which interact with a
+            <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/container/trunk/spi/src/main/java/org/jboss/ejb3/container/spi/remote/RemotingContainer.java">RemotingContainer</ulink>.
+            The implementations
             of RemotingContainer are responsible for invoking the real remote container (EJBContainer.invoke(ContainerInvocation)). An example
-            implementation of the RemotingContainer is the <link linkend="TODO-link">JBossRemotingContainer</link> which uses JBoss Remoting2 to
+            implementation of the RemotingContainer is the
+            <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/remoting/JBossRemotingContainer.java">JBossRemotingContainer</ulink>
+            which uses JBoss Remoting2 to
             invoke on the remote container. Before doing so, it may even run the invocation past some client side interceptors.
         </para>
         <note>
