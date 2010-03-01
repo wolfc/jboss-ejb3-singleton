@@ -3,7 +3,8 @@
 <chapter id="ejb3deployment">
                            <title>EJB3Deployment</title>
     <para>
-        <ulink url="TODO-link">EJB3Deployment</ulink> is a collection of <code>EJBContainer</code>s. Dependency resolution between
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/container/trunk/spi/src/main/java/org/jboss/ejb3/container/spi/deployment/EJB3Deployment.java">EJB3Deployment</ulink>
+        is a collection of <code>EJBContainer</code>s. Dependency resolution between
         <code>EJBContainer</code> and other components (like a PersistenceUnit) should happen at the <code>EJB3Deployment</code> level.
         As such methods like org.jboss.ejb3.EJBContainer.processMetaData() (in the jboss-ejb3-core containers) which setup a dependency policy
         will no longer be applicable for new containers. 
@@ -14,6 +15,7 @@
         For the new containers, this will be (slowly) moved out of the containers and instead be done in a deployer which installs the container
         as a MC bean. The deployer will be responsible for setting up (with the help of appropriate handlers and EJB3Deployment) dependencies
         for the container. *After* setting up the dependencies on the container, the deployer will deploy the container as a MC bean. See
-        <ulink url="TODO-link">SingletonContainerDeployer</ulink> on how this is done.
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/deployer/src/main/java/org/jboss/ejb3/singleton/deployer/SingletonContainerDeployer.java">SingletonContainerDeployer</ulink>
+        on how this is done.
     </para>
 </chapter>
