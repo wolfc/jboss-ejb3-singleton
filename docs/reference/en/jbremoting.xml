@@ -30,7 +30,7 @@
             The "SIMPLE" subsystem is backed by a <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/remoting/RemotingInvocationHandler.java">RemotingInvocationHandler</ulink>
             which is a server side
             JBRemoting invocation handler (and hence implements <code>org.jboss.remoting.ServerInvocationHandler</code>). The goal of this RemotingInvocationHandler
-            is to remote any AOP aspects from the client to remote container interaction. Internally, when a call reaches the <code>RemotingInvocationHandler</code>,
+            is to remove any AOP aspects from the client to remote container interaction. Internally, when a call reaches the <code>RemotingInvocationHandler</code>,
             it obtains a container id (TODO: we need to discuss this) from the <code>InvocationRequest</code>.
         The container id is populated in the <code>InvocationRequest</code> by the client side <code>JBossRemotingContainer</code>.
             An container registry exists on the server side with all registered container ids. The <code>RemotingInvocationHandler</code> then looks up this
