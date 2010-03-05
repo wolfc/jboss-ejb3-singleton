@@ -21,7 +21,14 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Set;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -30,23 +37,24 @@ import javax.naming.InitialContext;
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
+import org.jboss.beans.metadata.api.annotations.Inject;
 import org.jboss.beans.metadata.spi.BeanMetaData;
-import org.jboss.beans.metadata.spi.DemandMetaData;
-import org.jboss.beans.metadata.spi.DependencyMetaData;
-import org.jboss.beans.metadata.spi.SupplyMetaData;
 import org.jboss.beans.metadata.spi.builder.BeanMetaDataBuilder;
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.DeploymentStages;
 import org.jboss.deployers.spi.deployer.helpers.AbstractDeployer;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
-import org.jboss.ejb3.DependencyPolicy;
-import org.jboss.ejb3.Ejb3Deployment;
-import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.deployment.EJB3Deployment;
+import org.jboss.ejb3.container.spi.injection.DependencyBasedInjector;
+import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
+import org.jboss.ejb3.container.spi.injection.InjectorFactory;
+import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
+import org.jboss.ejb3.singleton.aop.impl.injection.PersistenceContextInjectorFactory;
 import org.jboss.ejb3.singleton.proxy.impl.SingletonBeanRemoteJNDIBinder;
+import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ear.jboss.JBossAppMetaData;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
@@ -54,6 +62,8 @@ import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeansMetaData;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBeanMetaData;
+import org.jboss.metadata.ejb.spec.BusinessLocalsMetaData;
+import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
 
 /**
  * A MC based deployer for deploying a {@link EJBContainer} as a MC bean
@@ -81,6 +91,8 @@ public class SingletonContainerDeployer extends AbstractDeployer
     */
    private static Logger logger = Logger.getLogger(SingletonContainerDeployer.class);
 
+   private PersistenceUnitDependencyResolver persistenceUnitResolver;
+
    /**
     * Constructs a {@link SingletonContainerDeployer} for
     * processing singleton beans
@@ -94,7 +106,9 @@ public class SingletonContainerDeployer extends AbstractDeployer
       addOutput(BeanMetaData.class);
 
       // ordering
-      addInput(Ejb3Deployment.class);
+     // addInput(Ejb3Deployment.class);
+      // new SPI based EJB3Deployment
+      addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
    }
 
@@ -179,18 +193,17 @@ public class SingletonContainerDeployer extends AbstractDeployer
                + beanMetaData.getEjbName() + " in unit " + unit);
       }
       Hashtable<String, String> ctxProperties = new Hashtable<String, String>();
-      Ejb3Deployment ejb3Deployment = unit.getAttachment(Ejb3Deployment.class);
-      if (ejb3Deployment == null)
-      {
-         throw new DeploymentException("Could not find " + Ejb3Deployment.class
-               + " for creating singleton container for bean " + sessionBean.getEjbName() + " in unit " + unit);
-      }
+//      Ejb3Deployment ejb3Deployment = unit.getAttachment(Ejb3Deployment.class);
+//      if (ejb3Deployment == null)
+//      {
+//         throw new DeploymentException("Could not find " + Ejb3Deployment.class
+//               + " for creating singleton container for bean " + sessionBean.getEjbName() + " in unit " + unit);
+//      }
       AOPBasedSingletonContainer singletonContainer = null;
       try
       {
          singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean
-               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, ejb3Deployment,
-               sessionBean);
+               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit);
       }
       catch (ClassNotFoundException cnfe)
       {
@@ -198,12 +211,9 @@ public class SingletonContainerDeployer extends AbstractDeployer
                + sessionBean.getEjbName() + " in unit " + unit, cnfe);
       }
 
-      // Register the newly created container with the new SPI based Ejb3Deployment
-      if (ejb3Deployment instanceof EJB3Deployment)
-      {
-         ((EJB3Deployment) ejb3Deployment).addContainer(singletonContainer);
-      }
-
+      // Register the newly created container with the new SPI based EJB3Deployment
+      this.registerWithEJB3Deployment(unit, singletonContainer);
+      
       String singletonContainerMCBeanName;
       try
       {
@@ -223,17 +233,31 @@ public class SingletonContainerDeployer extends AbstractDeployer
       // Here we let the injection handlers to setup appropriate dependencies
       // on the container and also create injectors for the container
       singletonContainer.instantiated();
-      singletonContainer.processMetadata();
+     // singletonContainer.processMetadata();
 
-      DependencyPolicy dependencyPolicy = singletonContainer.getDependencyPolicy();
-      if (dependencyPolicy instanceof MCDependencyPolicy)
+      List<InjectorFactory> injectorFactories = new ArrayList<InjectorFactory>();
+      PersistenceContextInjectorFactory pcInjectorFactory = new PersistenceContextInjectorFactory(unit,this.persistenceUnitResolver);
+      injectorFactories.add(pcInjectorFactory);
+      List<EJBContainerENCInjector> encInjectors = pcInjectorFactory.createENCInjectors(sessionBean);
+      singletonContainer.setENCInjectors(encInjectors);
+      
+
+      try
       {
-         // deploy the container as MC bean (by attaching to DU)
-         BeanMetaData containerBMD = this.createContainerWithDependencies(unit, singletonContainerMCBeanName,
-               singletonContainer, (MCDependencyPolicy) dependencyPolicy);
-         unit.addAttachment(BeanMetaData.class + ":" + containerBMD.getName(), containerBMD);
+         Class<?> beanClass = unit.getClassLoader().loadClass(sessionBean.getEjbClass());
+         singletonContainer.setEJBInjectors(this.processMethodAnnotations(beanClass, new HashSet<Method>(),injectorFactories));
       }
+      catch (ClassNotFoundException e)
+      {
+         throw new RuntimeException(e);
+      }
+      List<DependencyBasedInjector> allInjectors = new ArrayList<DependencyBasedInjector>();
+      allInjectors.addAll(singletonContainer.getEJBInjectors());
+      allInjectors.addAll(singletonContainer.getENCInjectors());
+      this.installContainer(unit, singletonContainerMCBeanName, singletonContainer, allInjectors);
 
+      
+      
       // TODO: This shouldn't be here
       SingletonBeanRemoteJNDIBinder jndiBinder = new SingletonBeanRemoteJNDIBinder(singletonContainer);
       try
@@ -244,7 +268,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
       {
          throw new DeploymentException(e);
       }
-
+      
    }
 
    /**
@@ -329,53 +353,101 @@ public class SingletonContainerDeployer extends AbstractDeployer
       return unit.getSimpleName().endsWith(".ear") || unit.getAttachment(JBossAppMetaData.class) != null;
    }
 
-   /**
-    * Creates a {@link BeanMetaData} for the passed <code>container</code> and sets appropriate dependencies,
-    * specified through <code>mcDependencyPolicy</code> on the {@link BeanMetaData}
-    * 
-    * @param unit Deployment unit
-    * @param mcBeanName The name to be assigned to the MC bean for the <code>container</code>
-    * @param container The container for which the {@link BeanMetaData} has to be created 
-    * @param mcDependencyPolicy The dependencies that are to be assigned on the {@link BeanMetaData} of the <code>container</code>
-    * @return Returns the {@link BeanMetaData} for the <code>container</code> with appropriate dependencies set
-    */
-   private BeanMetaData createContainerWithDependencies(DeploymentUnit unit, String mcBeanName, EJBContainer container,
-         MCDependencyPolicy mcDependencyPolicy)
+   private void registerWithEJB3Deployment(DeploymentUnit unit, EJBContainer container)
    {
-
-      BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(mcBeanName, container.getClass().getName());
-      builder.setConstructorValue(container);
-
-      logger.info("creating bean: " + mcBeanName);
-      logger.info("  with dependencies:");
-      if (mcDependencyPolicy.getDependencies() != null)
+      EJB3Deployment ejb3Deployment = unit.getAttachment(EJB3Deployment.class);
+      if (ejb3Deployment != null)
       {
-         for (DependencyMetaData dependency : mcDependencyPolicy.getDependencies())
+         ejb3Deployment.addContainer(container);
+      }
+      return;
+   }
+
+   @Inject
+   public void setPersistenceUnitResolver(PersistenceUnitDependencyResolver puResolver)
+   {
+      this.persistenceUnitResolver = puResolver;
+   }
+
+   private List<InstanceInjector> processMethodAnnotations(Class<?> clazz, Set<Method> visitedMethods,
+         List<InjectorFactory> injectorFactories)
+   {
+      if (clazz == null || clazz.equals(Object.class))
+      {
+         return Collections.EMPTY_LIST;
+      }
+      Method[] methods = clazz.getDeclaredMethods();
+      List<InstanceInjector> injectors = new ArrayList<InstanceInjector>();
+      for (Method method : methods)
+      {
+         if (method.getParameterTypes().length != 1)
+            continue;
+
+         if (!Modifier.isPrivate(method.getModifiers()))
          {
-            builder.addDependency(dependency.getDependency());
-            logger.info("\t" + dependency.getDependency());
+            if (visitedMethods.contains(method.getName()))
+            {
+               continue;
+            }
+            visitedMethods.add(method);
+         }
+
+         if (injectorFactories != null)
+         {
+            for (InjectorFactory injectorFactory : injectorFactories)
+            {
+               injectors.add(injectorFactory.createInstanceInjector(method));
+            }
          }
       }
-      logger.info("  and demands:");
-      if (mcDependencyPolicy.getDemands() != null)
+      // recursion needs to come last as the method could be overriden and we don't want the overriding method to be ignored
+      processMethodAnnotations(clazz.getSuperclass(), visitedMethods, injectorFactories);
+      
+      return injectors;
+   }
+   
+   
+   private void installContainer(DeploymentUnit unit, String containerMCBeanName, EJBContainer container, List<DependencyBasedInjector> injectors)
+   {
+      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container.getClass().getName());
+      containerBMDBuilder.setConstructorValue(container);
+      
+      // TODO: Hack! (for quick testing)
+      JBossSessionBean31MetaData sessionbean = (JBossSessionBean31MetaData) container.getMetaData();
+      String localhome = sessionbean.getLocalHome();
+      containerBMDBuilder.addSupply("Class:"+localhome);
+      String remoteHome = sessionbean.getHome();
+      containerBMDBuilder.addSupply("Class:"+remoteHome);
+      BusinessLocalsMetaData businessLocals = sessionbean.getBusinessLocals();
+      if (businessLocals != null)
       {
-         for (DemandMetaData demand : mcDependencyPolicy.getDemands())
+         for (String businessLocal : businessLocals)
          {
-            builder.addDemand(demand.getDemand());
-            logger.info("\t" + demand.getDemand());
+            containerBMDBuilder.addSupply("Class:"+businessLocal);
          }
       }
-
-      logger.info("  and supplies:");
-      if (mcDependencyPolicy.getSupplies() != null)
+      BusinessRemotesMetaData businessRemotes = sessionbean.getBusinessRemotes();
+      if (businessRemotes != null)
       {
-         for (SupplyMetaData supply : mcDependencyPolicy.getSupplies())
+         for (String businessRemote : businessRemotes)
          {
-            builder.addSupply(supply.getSupply());
-            logger.info("\t" + supply.getSupply());
+            containerBMDBuilder.addSupply("Class:"+businessRemote);
          }
       }
-
-      return builder.getBeanMetaData();
+      
+      for (DependencyBasedInjector injector : injectors)
+      {
+         BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(injector.toString(), injector.getClass().getName());
+         builder.setConstructorValue(injector);
+         for (String dep : injector.getDependencies())
+         {
+            builder.addDependency(dep);
+         }
+         unit.addAttachment(BeanMetaData.class + ":" + injector.toString(), builder.getBeanMetaData());
+         
+         containerBMDBuilder.addDependency(injector.toString());
+      }
+      
+      unit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
    }
 }

@@ -33,6 +33,7 @@ import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.singleton.impl.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
 import org.jboss.ejb3.singleton.impl.test.simple.SimpleSingletonBean;
@@ -251,6 +252,26 @@ public class SimpleSingletonContainerTest
       public List<Class<?>> getInterceptorClasses()
       {
          return Collections.EMPTY_LIST;
+      }
+
+      /* (non-Javadoc)
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
+       */
+      @Override
+      public List<InstanceInjector> getInterceptorInjectors()
+      {
+         // TODO Auto-generated method stub
+         return null;
+      }
+
+      /* (non-Javadoc)
+       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
+       */
+      @Override
+      public void setInterceptorInjectors(List<InstanceInjector> interceptorInjectors)
+      {
+         // TODO Auto-generated method stub
+         
       }
 
    }

@@ -6,9 +6,9 @@
     <bean name="SingletonContainerDeployer" class="org.jboss.ejb3.singleton.deployer.SingletonContainerDeployer"/>
     
     <!-- deploys a EJB3Deployment (TODO: needs to move out to a different component, since this isn't specific to singleton) -->
-    <bean name="EJB3DeploymentDeployer" class="org.jboss.ejb3.singleton.deployer.EJB3DeploymentDeployer">
-        <property name="kernelController"><inject bean="jboss.kernel:service=KernelController"/></property> 
-    </bean>
+    <bean name="EJB3DeploymentDeployer" class="org.jboss.ejb3.singleton.deployer.EJB3DeploymentDeployer"/>
+         
+    
     
     
 </deployment>

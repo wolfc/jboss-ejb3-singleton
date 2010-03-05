@@ -21,12 +21,21 @@
 */
 package org.jboss.ejb3.singleton.impl.container;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
+import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
 import org.jboss.logging.Logger;
@@ -69,6 +78,10 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
     * The interceptor registry for this container
     */
    private InterceptorRegistry interceptorRegistry;
+   
+   private List<EJBContainerENCInjector> encInjectors = new ArrayList<EJBContainerENCInjector>();
+   
+   private List<InstanceInjector> ejbInstanceInjectors = new ArrayList<InstanceInjector>();
 
    /**
     * Creates a {@link SingletonContainer} for the EJB class <code>beanClass</code>
@@ -134,6 +147,11 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
    {
       // TODO: If @Startup, then create a singleton bean context here
       
+      // Use ENCInjectors to setup ENC
+      for (EJBContainerENCInjector encInjector : this.encInjectors)
+      {
+         encInjector.inject(this);
+      }
    }
    
    /**
@@ -230,8 +248,12 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
    @Override
    public void postConstruct(BeanContext beanContext) throws Exception
    {
+      List<InstanceInjector> injectors = this.getEJBInjectors();
+      for (InstanceInjector injector : injectors)
+      {
+         injector.inject(beanContext, beanContext.getBeanInstance());
+      }
       // pass the bean context to the interceptor registry to do its job.
-      // we don't have anything specific/additional to do here.
       this.interceptorRegistry.invokePostConstruct(beanContext);
       
    }
@@ -247,5 +269,63 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
       this.interceptorRegistry.invokePreDestroy(beanContext);
    }
 
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getClassLoader()
+    */
+   @Override
+   public ClassLoader getClassLoader()
+   {
+      return this.beanClass.getClassLoader();
+   }
    
+   public Context getENC()
+   {
+      // TODO: Hack!
+      try
+      {
+         return new InitialContext();
+      }
+      catch (NamingException e)
+      {
+         throw new RuntimeException(e);
+      }
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getEJBInjectors()
+    */
+   @Override
+   public List<InstanceInjector> getEJBInjectors()
+   {
+      return this.ejbInstanceInjectors;
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#setEJBInjectors(java.util.List)
+    */
+   @Override
+   public void setEJBInjectors(List<InstanceInjector> injectors)
+   {
+      this.ejbInstanceInjectors = injectors;
+      
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getENCInjectors()
+    */
+   @Override
+   public List<EJBContainerENCInjector> getENCInjectors()
+   {
+      return this.encInjectors;
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#setENCInjectors(java.util.List)
+    */
+   @Override
+   public void setENCInjectors(List<EJBContainerENCInjector> encInjectors)
+   {
+      this.encInjectors = encInjectors;
+      
+   }
 }

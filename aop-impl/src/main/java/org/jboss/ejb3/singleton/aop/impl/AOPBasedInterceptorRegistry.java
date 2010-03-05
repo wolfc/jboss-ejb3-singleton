@@ -21,6 +21,7 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.jboss.aop.MethodInfo;
@@ -29,6 +30,8 @@ import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.container.spi.injection.InstanceInjector;
+import org.jboss.ejb3.interceptor.InterceptorInjector;
 
 /**
  * A AOP based implementation of the {@link InterceptorRegistry} for a
@@ -52,7 +55,9 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
     * the {@link AOPBasedSingletonContainer} to expose this {@link LegacySingletonBeanContext}
     */
    private LegacySingletonBeanContext legacySingletonBeanContext;
-   
+
+   private List<InstanceInjector> interceptorInjectors = new ArrayList<InstanceInjector>();
+
    /**
     * Construct an {@link AOPBasedInterceptorRegistry} for a {@link AOPBasedSingletonContainer}
     * 
@@ -91,7 +96,7 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       AOPBasedContainerInvocationContext aopInvocationContext = (AOPBasedContainerInvocationContext) containerInvocation;
       // form a AOP invocation
       MethodInfo methodInfo = aopInvocationContext.getMethodInfo();
-      
+
       EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext> invocation = new EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext>(
             aopInvocationContext.getMethodInfo());
       invocation.setAdvisor(methodInfo.getAdvisor());
@@ -134,14 +139,15 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    public void invokePostConstruct(BeanContext targetBeanContext) throws Exception
    {
       // fallback on legacy AOP based lifecycle impl
-      this.legacySingletonBeanContext = new LegacySingletonBeanContext(this.aopBasedSingletonContainer, targetBeanContext);
+      this.legacySingletonBeanContext = new LegacySingletonBeanContext(this.aopBasedSingletonContainer,
+            targetBeanContext);
       // TODO: This passes the bean context through a series of injectors
       // which are responsible for carrying out the injection on the bean context (ex: field based
       // injection like for @PersistenceContext).
       // THIS HAS TO BE IN THE EJBLifecycleHandler SO THAT THE INJECTIONS
       // CAN HAPPEN ON LIFECYCLE EVENTS (LIKE BEAN INSTANTIATION)
-      this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
-      
+      //this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
+
       // Note: The method name initialiseInterceptorInstances() gives a 
       // wrong impression. This method not just instantiates a interceptor instance,
       // but it also injects (through the help of InjectionHanlder(s)) the interceptor
@@ -149,7 +155,7 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       // TODO: Ideally, this should be split up into separate instantiation and injection
       // calls.
       legacySingletonBeanContext.initialiseInterceptorInstances();
-      
+
       // invoke post construct lifecycle on the bean/interceptor instances
       this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
 
@@ -190,6 +196,25 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    public List<Class<?>> getInterceptorClasses()
    {
       return this.aopBasedSingletonContainer.getBeanContainer().getInterceptorRegistry().getInterceptorClasses();
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
+    */
+   @Override
+   public List<InstanceInjector> getInterceptorInjectors()
+   {
+      return this.interceptorInjectors;
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
+    */
+   @Override
+   public void setInterceptorInjectors(List<InstanceInjector> interceptorInjectors)
+   {
+      this.interceptorInjectors = interceptorInjectors;
+
    }
 
 }

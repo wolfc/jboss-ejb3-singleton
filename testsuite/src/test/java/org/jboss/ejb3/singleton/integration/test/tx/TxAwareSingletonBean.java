@@ -42,7 +42,7 @@ public class TxAwareSingletonBean implements UserManager
 
    public static final String JNDI_NAME = "Tx-UserManagerBean";
    
-   @PersistenceContext
+   
    private EntityManager em;
 
    /* (non-Javadoc)
@@ -66,4 +66,9 @@ public class TxAwareSingletonBean implements UserManager
       return this.em.find(User.class, id);
    }
    
+   @PersistenceContext
+   public void setEntityManager(EntityManager em)
+   {
+      this.em = em;
+   }
 }

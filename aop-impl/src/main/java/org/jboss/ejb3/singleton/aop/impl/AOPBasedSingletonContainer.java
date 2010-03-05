@@ -24,10 +24,14 @@ package org.jboss.ejb3.singleton.aop.impl;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 
 import javax.ejb.Handle;
 import javax.ejb.TimerService;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.naming.Context;
 
 import org.jboss.aop.Advisor;
 import org.jboss.aop.Domain;
@@ -38,7 +42,7 @@ import org.jboss.aop.joinpoint.MethodInvocation;
 import org.jboss.aop.util.MethodHashing;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
-import org.jboss.ejb3.Ejb3Deployment;
+import org.jboss.ejb3.Ejb3Module;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
@@ -46,6 +50,8 @@ import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
+import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
 import org.jboss.ejb3.session.SessionSpecContainer;
@@ -79,7 +85,9 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * This is the container to which the {@link AOPBasedSingletonContainer} will
     * delegate the calls to
     */
-   private SingletonContainer simpleSingletonContainer;
+   private SingletonContainer delegate;
+
+   private DeploymentUnit deploymentUnit;
 
    /**
     * Returns the AOP domain name which this container uses
@@ -102,15 +110,22 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @throws ClassNotFoundException
     */
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, Ejb3Deployment deployment, JBossSessionBean31MetaData beanMetaData)
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du)
          throws ClassNotFoundException
    {
-      super(cl, beanClassName, ejbName, domain, ctxProperties, deployment, beanMetaData);
+      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData);
+      this.deploymentUnit = du;
 
+   }
+
+   public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData) throws ClassNotFoundException
+   {
+      super(cl, beanClassName, ejbName, domain, ctxProperties, null, beanMetaData);
       // create a AOP based interceptor registry which will be used by the container
       InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
       // create the new jboss-ejb3-container-spi based singleton container
-      this.simpleSingletonContainer = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
+      this.delegate = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
 
    }
 
@@ -121,7 +136,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public void create() throws Exception
    {
       super.create();
-      this.simpleSingletonContainer.create();
+      this.delegate.create();
    }
 
    /**
@@ -133,7 +148,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       super.lockedStart();
 
       // pass on the control to our simple singleton container
-      this.simpleSingletonContainer.start();
+      this.delegate.start();
    }
 
    /**
@@ -152,7 +167,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected void lockedStop() throws Exception
    {
       super.lockedStop();
-      this.simpleSingletonContainer.stop();
+      this.delegate.stop();
    }
 
    /**
@@ -161,7 +176,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public void destroy() throws Exception
    {
-      this.simpleSingletonContainer.destroy();
+      this.delegate.destroy();
       // let the super do the rest
       super.destroy();
    }
@@ -222,7 +237,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          SessionSpecContainer.invokedMethod.push(invokedMethod);
 
          // pass the control to the simple singleton container
-         Object result = this.simpleSingletonContainer.invoke(containerInvocation);
+         Object result = this.delegate.invoke(containerInvocation);
 
          // create an InvocationResponse out of the result 
          Map<Object, Object> responseContextInfo = containerInvocation.getResponseContextInfo();
@@ -267,7 +282,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          // TODO: Legacy push/pop copied from StatelessContainer/SessionSpecContainer
          SessionSpecContainer.invokedMethod.push(serializableMethod);
          // pass the control to the simple singleton container
-         return this.simpleSingletonContainer.invoke(containerInvocation);
+         return this.delegate.invoke(containerInvocation);
 
       }
       finally
@@ -390,7 +405,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public EJBInstanceManager getBeanInstanceManager()
    {
-      return this.simpleSingletonContainer.getBeanInstanceManager();
+      return this.delegate.getBeanInstanceManager();
    }
 
    /**
@@ -399,7 +414,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public EJBDeploymentInfo getDeploymentInfo()
    {
-      return this.simpleSingletonContainer.getDeploymentInfo();
+      return this.delegate.getDeploymentInfo();
    }
 
    /**
@@ -425,7 +440,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public InterceptorRegistry getInterceptorRegistry()
    {
-      return this.simpleSingletonContainer.getInterceptorRegistry();
+      return this.delegate.getInterceptorRegistry();
    }
 
    /**
@@ -437,5 +452,95 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return super.getBeanContainer();
    }
 
-   
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getClassLoader()
+    */
+   @Override
+   public ClassLoader getClassLoader()
+   {
+      return this.classloader;
+   }
+
+   /**
+    * @see org.jboss.ejb3.EJBContainer#createObjectName(java.lang.String)
+    */
+   @Override
+   public String createObjectName(String ejbName)
+   {
+      StringBuilder sb = new StringBuilder(Ejb3Module.BASE_EJB3_JMX_NAME + ",");
+      DeploymentUnit ear = this.deploymentUnit == null ? null : this.deploymentUnit.getParent();
+      if (ear != null)
+      {
+         sb.append("ear=");
+         sb.append(ear.getSimpleName());
+         sb.append(",");
+      }
+      String unitName = this.deploymentUnit == null ? null : this.deploymentUnit.getSimpleName();
+      if (unitName == null)
+      {
+         sb.append("*");
+      }
+      else
+      {
+         sb.append("jar=");
+         sb.append(unitName);
+      }
+      sb.append(",name=");
+      sb.append(ejbName);
+      try
+      {
+         ObjectName on = new ObjectName(sb.toString());
+         return on.getCanonicalName();
+      }
+      catch (MalformedObjectNameException e)
+      {
+         throw new RuntimeException(e);
+      }
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#setEJBInjectors(java.util.List)
+    */
+   @Override
+   public void setEJBInjectors(List<InstanceInjector> injectors)
+   {
+      this.delegate.setEJBInjectors(injectors);
+
+   }
+
+   /**
+    * @see org.jboss.ejb3.EJBContainer#getInjectors()
+    */
+   public List<InstanceInjector> getEJBInjectors()
+   {
+      return this.delegate.getEJBInjectors();
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getENC()
+    */
+   @Override
+   public Context getENC()
+   {
+      return this.delegate.getENC();
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#getENCInjectors()
+    */
+   @Override
+   public List<EJBContainerENCInjector> getENCInjectors()
+   {
+      return this.delegate.getENCInjectors();
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.EJBContainer#setENCInjectors(java.util.List)
+    */
+   @Override
+   public void setENCInjectors(List<EJBContainerENCInjector> encInjectors)
+   {
+      this.delegate.setENCInjectors(encInjectors);
+
+   }
 }

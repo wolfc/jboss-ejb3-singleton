@@ -113,7 +113,7 @@ public class AOPBasedSingletonContainerTestCase
       String beanName = SimpleSingletonBean.class.getSimpleName();
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
-            this.singletonAOPDomain, props, new MockEJB3Deployment(), sessionBeanMetaData);
+            this.singletonAOPDomain, props, sessionBeanMetaData);
 
       Method getCountMethod = SimpleSingletonBean.class.getDeclaredMethod("getCount", new Class<?>[]
       {});

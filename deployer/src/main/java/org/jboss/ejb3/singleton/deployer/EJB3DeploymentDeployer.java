@@ -21,7 +21,6 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
-import org.jboss.beans.metadata.spi.builder.BeanMetaDataBuilder;
 import org.jboss.dependency.spi.Controller;
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.DeploymentStages;
@@ -31,10 +30,7 @@ import org.jboss.deployers.vfs.spi.structure.VFSDeploymentUnit;
 import org.jboss.ejb3.Ejb3Deployment;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.container.spi.deployment.EJB3Deployment;
-import org.jboss.ejb3.singleton.aop.impl.deployment.LegacyEJB3DeploymentAdapter;
-import org.jboss.ejb3.singleton.aop.impl.deployment.MCBasedEJB3DeploymentUnit;
-import org.jboss.kernel.plugins.dependency.AbstractKernelControllerContext;
-import org.jboss.kernel.spi.dependency.KernelControllerContext;
+import org.jboss.ejb3.singleton.impl.deployment.EJB3DeploymentImpl;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 
@@ -53,7 +49,7 @@ public class EJB3DeploymentDeployer extends AbstractDeployer
    private static Logger logger = Logger.getLogger(EJB3DeploymentDeployer.class);
 
    private Controller kernelController;
-   
+
    /**
     * Constructs a {@link SingletonContainerDeployer} for
     * processing singleton beans
@@ -70,9 +66,7 @@ public class EJB3DeploymentDeployer extends AbstractDeployer
       this.addOutput(Ejb3Deployment.class);
       // also add the new SPI based EJB3Deployment as output
       this.addOutput(EJB3Deployment.class);
-      
-      
-      
+
    }
 
    /**
@@ -87,44 +81,20 @@ public class EJB3DeploymentDeployer extends AbstractDeployer
       {
          return;
       }
-      VFSDeploymentUnit vfsDeploymentUnit = (VFSDeploymentUnit) unit;
+      
       // get metadata
-      JBossMetaData metadata = unit.getAttachment(AttachmentNames.PROCESSED_METADATA,JBossMetaData.class);
+      JBossMetaData metadata = unit.getAttachment(AttachmentNames.PROCESSED_METADATA, JBossMetaData.class);
       // we only process EJB3.x
       if (!metadata.isEJB3x())
       {
          return;
       }
-      
-      Ejb3Deployment ejb3Deployment = new LegacyEJB3DeploymentAdapter(unit,new MCBasedEJB3DeploymentUnit(vfsDeploymentUnit),null,metadata);
-      String deploymentMCBeanName = ejb3Deployment + "-" + "EJB3Deployment";
-      
-      // add as a attachment
-      unit.addAttachment(Ejb3Deployment.class, ejb3Deployment);
-      unit.addAttachment(EJB3Deployment.class, (EJB3Deployment) ejb3Deployment);
-      
-      BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(deploymentMCBeanName, ejb3Deployment.getClass().getName());
-      builder.setConstructorValue(ejb3Deployment);
-      
-      KernelControllerContext context = new AbstractKernelControllerContext(null, builder.getBeanMetaData(), null);
-      
-      try
-      {
-         // install the EJB3Deployment as a MC bean
-         // don't rely on BeanMetaDataDeployer since we need EJB3Deployment to 
-         // go through the MC deployment cycle immidiately before other deployers
-         // come into picture
-         kernelController.install(context);
-      }
-      catch (Throwable t)
-      {
-         throw DeploymentException.rethrowAsDeploymentException("Error deploying EJB3Deployment for : " + unit.getName(), t);
-      }
-      
+
+      EJB3Deployment ejb3Deployment = new EJB3DeploymentImpl(unit.getSimpleName(), unit, metadata);
+
+      // add as an attachment
+      unit.addAttachment(EJB3Deployment.class, ejb3Deployment);
+
    }
 
-   public void setKernelController(Controller kernelController)
-   {
-      this.kernelController = kernelController;
-   }
 }

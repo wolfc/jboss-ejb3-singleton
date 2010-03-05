@@ -26,8 +26,7 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.2.3</version.ejb3.core>
-        <version.ejb3.vfs.impl>1.0.0-alpha-1</version.ejb3.vfs.impl>
+	    <version.ejb3.core>1.2.4-SNAPSHOT</version.ejb3.core>
     </properties>
     
     <build>
@@ -96,11 +95,6 @@
             </exclusions>
         </dependency>
 
-        <dependency>
-            <groupId>org.jboss.ejb3.vfs</groupId>
-            <artifactId>jboss-ejb3-vfs-impl-vfs2</artifactId>
-            <version>${version.ejb3.vfs.impl}</version>
-        </dependency>
         
         <!-- ***************************** -->
         <!--  Test dependencies -->

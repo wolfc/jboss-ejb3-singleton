@@ -19,86 +19,50 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.aop.impl.deployment;
+package org.jboss.ejb3.singleton.impl.deployment;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.security.jacc.PolicyConfiguration;
-
-import org.jboss.beans.metadata.api.annotations.Inject;
-import org.jboss.ejb3.DependencyPolicy;
-import org.jboss.ejb3.DeploymentScope;
-import org.jboss.ejb3.DeploymentUnit;
-import org.jboss.ejb3.Ejb3Deployment;
+import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.deployment.EJB3Deployment;
-import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
-import org.jboss.ejb3.javaee.JavaEEComponent;
-import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 
 /**
- * LegacyEJB3DeploymentAdapter
+ * EJB3DeploymentImpl
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class LegacyEJB3DeploymentAdapter extends Ejb3Deployment implements EJB3Deployment
+public class EJB3DeploymentImpl implements EJB3Deployment
 {
 
+   private String name;
    
-   private PersistenceUnitDependencyResolver persistenceUnitResolver;
-   
-   private org.jboss.deployers.structure.spi.DeploymentUnit deploymentUnit;
-   
+   private DeploymentUnit deploymentUnit;
+
+   private JBossMetaData jbossMetaData;
+
    /**
     * @param deploymentUnit
     * @param unit
     * @param deploymentScope
     * @param metaData
     */
-   public LegacyEJB3DeploymentAdapter(org.jboss.deployers.structure.spi.DeploymentUnit deploymentUnit,
-         DeploymentUnit unit, DeploymentScope deploymentScope, JBossMetaData metaData)
+   public EJB3DeploymentImpl(String name, DeploymentUnit deploymentUnit, JBossMetaData jbossMetaData)
    {
-      super(deploymentUnit, unit, deploymentScope, metaData);
+      this.name = name;
       this.deploymentUnit = deploymentUnit;
+      this.jbossMetaData = jbossMetaData;
    }
 
    /**
     * EJB name --> EJB container map
     */
    private Map<String, EJBContainer> containers = new HashMap<String, EJBContainer>();
-   
-   /**
-    * @see org.jboss.ejb3.Ejb3Deployment#createDependencyPolicy(org.jboss.ejb3.javaee.JavaEEComponent)
-    */
-   @Override
-   public DependencyPolicy createDependencyPolicy(JavaEEComponent component)
-   {
-      return new JBoss5DependencyPolicy(component);
-   }
-
-   /**
-    * @see org.jboss.ejb3.Ejb3Deployment#createPolicyConfiguration()
-    */
-   @Override
-   protected PolicyConfiguration createPolicyConfiguration() throws Exception
-   {
-      throw new UnsupportedOperationException("NYI - createPolicyConfiguration");
-   }
-
-   /**
-    * @see org.jboss.ejb3.Ejb3Deployment#putJaccInService(javax.security.jacc.PolicyConfiguration, org.jboss.ejb3.DeploymentUnit)
-    */
-   @Override
-   protected void putJaccInService(PolicyConfiguration pc, DeploymentUnit unit)
-   {
-      throw new UnsupportedOperationException("NYI - putJaccInService");
-      
-   }
 
    /**
     * @see org.jboss.ejb3.container.spi.deployment.EJB3Deployment#addContainer(org.jboss.ejb3.container.spi.EJBContainer)
@@ -145,24 +109,14 @@ public class LegacyEJB3DeploymentAdapter extends Ejb3Deployment implements EJB3D
       }
       this.containers.remove(ejbName);
    }
-   
-   @Inject
-   public void setPersistenceUnitResolver(PersistenceUnitDependencyResolver puResolver)
-   {
-      this.persistenceUnitResolver = puResolver;
-   }
-   
+
    /**
-    * @see org.jboss.ejb3.Ejb3Deployment#resolvePersistenceUnitSupplier(java.lang.String)
+    * @see org.jboss.ejb3.container.spi.deployment.EJB3Deployment#getName()
     */
    @Override
-   protected String resolvePersistenceUnitSupplier(String persistenceUnitName)
+   public String getName()
    {
-      if (this.persistenceUnitResolver == null)
-      {
-         return null;
-      }
-      return this.persistenceUnitResolver.resolvePersistenceUnitSupplier(this.deploymentUnit, persistenceUnitName);
+      return this.name;
    }
 
 }
