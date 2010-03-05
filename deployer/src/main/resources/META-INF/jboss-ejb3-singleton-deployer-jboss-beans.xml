@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deployment xmlns="urn:jboss:bean-deployer:2.0">
+
+    
+    <!-- EJB3.1 Singleton bean container deployer -->
+    <bean name="SingletonContainerDeployer" class="org.jboss.ejb3.singleton.deployer.SingletonContainerDeployer"/>
+    
+    <!-- deploys a EJB3Deployment (TODO: needs to move out to a different component, since this isn't specific to singleton) -->
+    <bean name="EJB3DeploymentDeployer" class="org.jboss.ejb3.singleton.deployer.EJB3DeploymentDeployer"/>
+         
+    
+    
+    
+</deployment>

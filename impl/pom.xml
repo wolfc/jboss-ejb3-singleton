@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!--
+    vi:ts=2:sw=2:expandtab:
+    -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+
+    <parent>
+        <groupId>org.jboss.ejb3.singleton</groupId>
+        <artifactId>jboss-ejb3-singleton-build</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../build/pom.xml</relativePath>
+    </parent>
+    
+    <!-- Model Information -->
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Artifact Information  -->
+    <groupId>org.jboss.ejb3.singleton</groupId>
+    <artifactId>jboss-ejb3-singleton-impl</artifactId>
+    <packaging>jar</packaging>
+    <name>JBoss EJB 3.1+ @Singleton implementation</name>
+    <url>http://www.jboss.org</url>
+    <description>Implementation of @Singleton as detailed by EJB 3.1 Specification</description>
+    
+    <properties>
+        <version.ejb3.singleton.container.spi>${project.version}</version.ejb3.singleton.container.spi>
+    </properties>
+    
+    <build>
+        <plugins>
+            <!-- Assembly Plugin -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-4</version>
+                <executions>
+                    <!--  Build singleton impl "package" -->
+                  <execution>
+                    <id>build-singleton-impl-package</id> 
+                    <phase>package</phase>
+                    <goals>
+                      <goal>single</goal>
+                    </goals>
+                  </execution>
+                </executions>
+                <configuration>
+                  <descriptors>
+                    <descriptor>src/assembly/package-assembler.xml</descriptor>
+                  </descriptors>
+                </configuration>
+            </plugin>
+        </plugins>
+    
+    </build>
+    
+    <dependencies>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3.singleton</groupId>
+            <artifactId>jboss-ejb3-singleton-spi</artifactId>
+            <version>${version.ejb3.singleton.container.spi}</version>
+        </dependency>
+        
+         <dependency>
+            <groupId>org.jboss.remoting</groupId>
+            <artifactId>jboss-remoting</artifactId>
+            <version>2.5.2</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3</groupId>
+            <artifactId>jboss-ejb3-common</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+        
+        <!-- ***************************** -->
+        <!--  Test dependencies -->
+        <!-- ***************************** -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+    
+    </dependencies>
+
+</project>	

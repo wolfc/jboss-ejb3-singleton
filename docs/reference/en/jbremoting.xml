@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<!--suppress XmlWrongRootElement -->
+<chapter id="remotingcontainer">
+
+    <title>Proxy/InvocationHandler interaction with the RemotingContainer</title>
+    <sect1>
+        <title>Overview</title>
+    <para>The proxies created for a singleton session bean interact with client side invocation handlers.
+        The responsibility of these client side invocation handlers is to (somehow) pass on the control to the container which might reside on a remote server.
+        The invocation handler uses the new SPI <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/container/trunk/spi/src/main/java/org/jboss/ejb3/container/spi/remote/RemotingContainer.java">RemotingContainer</ulink>
+        and just invokes the invoke() method on the RemotingContainer.
+        Implementations of the RemotingContainer will have the necessary knowledge to (somehow) pass on the control to the container on the remote server. In this
+        chapter, we will look at one such implementation of RemotingContainer.
+    </para>
+    </sect1>
+    <sect1 id="jbremotingcontainer">
+        <title>JBoss Remoting 2.x based implementation of RemotingContainer</title>
+        <para>
+            A JBoss Remoting 2.x based implementation of the RemotingContainer is available here <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/remoting/JBossRemotingContainer.java">JBossRemotingContainer</ulink>.
+            Internally it uses
+            the default InvokerLocator URL (or the one overridden in metadata) to connect to the JBRemoting server. The important thing to notice here
+            is that it expects a "SIMPLE" subsystem to be available on this Remoting connector (unlike the older client side interceptors which expect
+            an "AOP" subsystem). The <code>JBossRemotingContainer</code> creates a <code>InvocationRequest</code> which contains the container id as well
+            as a <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/remoting/RemotableContainerInvocation.java">RemotableContainerInvocation</ulink>.
+            <note><para>Client side interceptors need to be invoked in the JBossRemotingContainer before passing on the control to the
+            JBRemoting server side invocation handler. This is currently a TODO</para></note>
+        </para>
+        <para>
+            The "SIMPLE" subsystem is backed by a <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/remoting/RemotingInvocationHandler.java">RemotingInvocationHandler</ulink>
+            which is a server side
+            JBRemoting invocation handler (and hence implements <code>org.jboss.remoting.ServerInvocationHandler</code>). The goal of this RemotingInvocationHandler
+            is to remove any AOP aspects from the client to remote container interaction. Internally, when a call reaches the <code>RemotingInvocationHandler</code>,
+            it obtains a container id (TODO: we need to discuss this) from the <code>InvocationRequest</code>.
+        The container id is populated in the <code>InvocationRequest</code> by the client side <code>JBossRemotingContainer</code>.
+            An container registry exists on the server side with all registered container ids. The <code>RemotingInvocationHandler</code> then looks up this
+            registry to get hold of the (new SPI based) <code>EJBContainer</code> and invokes <code>EJBContainer.invoke(ContainerInvocation)</code> method.
+            <note>
+                <para>With this new "SIMPLE" subsystem, the dynamicInvoke method (of the old jboss-ejb3-core container) is not used. And all AOP semantics
+                are skipped</para>
+            </note>
+            Here's the server configuration (notice the "SIMPLE" subsystem) from the ejb3-connectors-jboss-beans.xml:
+            <programlisting>
+<![CDATA[
+<!-- Remoting Server Configuration -->
+  <bean name="ServerConfiguration"
+    class="org.jboss.remoting.ServerConfiguration">
+    <property name="invocationHandlers">
+      <map keyClass="java.lang.String" valueClass="java.lang.String">
+        <entry>
+          <key>AOP</key>
+          <value>
+            org.jboss.aspects.remoting.AOPRemotingInvocationHandler
+          </value>
+        </entry>
+        <entry>
+          <key>SIMPLE</key>
+          <value>
+            org.jboss.ejb3.singleton.impl.remoting.RemotingInvocationHandler
+          </value>
+        </entry>
+      </map>
+    </property>
+  </bean>        
+        
+                ]]>
+
+            </programlisting>
+    </para>
+    </sect1>    
+</chapter>

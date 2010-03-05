@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<!--suppress XmlWrongRootElement -->
+<chapter id="container">
+    <title>Container</title>
+    <para>
+        Before we look into the implementation of the container, let's just see what modules are present in the singleton component.
+        The singleton component consists of:
+        <itemizedlist>
+            <listitem>spi : Module exposing any singleton specific SPI</listitem>
+            <listitem>impl : This module provides a singleton implementation purely based on the new container SPI</listitem>
+            <listitem>aop-impl : This module provides integration between the AOP based existing container/interceptors, which are
+            present in jboss-ejb3-core, with the new singleton container implementation available in the "impl" module</listitem>
+            <listitem>proxy : Module responsible for generating proxies for singleton beans</listitem>
+            <listitem>deployer : Module containing MC based deployers for carrying out various deployment time activities</listitem>
+            <listitem>testsuite : Module responsible for running the singleton bean integration tests against the AS</listitem>
+        </itemizedlist>
+    </para>
+    <sect1>
+        <title>impl module</title>
+        <para>
+            In this section we will look into the implementation available in the "impl" module of the singleton component.
+        </para>
+        <para>
+            This module provides a simple <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/container/SingletonContainer.java">SingletonContainer</ulink>
+            which is an implementation of the
+            new container SPI. This container uses a <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/container/SingletonEJBInstanceManagerImpl.java">SingletonEJBInstanceManagerImpl</ulink> for managing
+            the bean instances. The SingletonContainer itself acts an <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/container/trunk/spi/src/main/java/org/jboss/ejb3/container/spi/lifecycle/EJBLifecycleHandler.java">EJBLifecycleHandler</ulink>
+        </para>
+    </sect1>
+    <sect1>
+        <title>aop-impl module</title>
+        <para>
+            In it's current form, this acts as an integration between the "impl" module and the old containers and interceptors which
+            are based on AOP and reside in the jboss-ejb3-core module. The <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/aop-impl/src/main/java/org/jboss/ejb3/singleton/aop/impl/AOPBasedSingletonContainer.java">AOPBasedSingletonContainer</ulink>
+            *is a* org.jboss.ejb3.EJBContainer (the old jboss-ejb3-core) *as well as* a org.jboss.ejb3.container.spi.EJBContainer (new SPI based):
+            <programlisting>
+                <![CDATA[
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements InjectionContainer, EJBContainer
+{
+
+   /**
+    * This is the container to which the {@link AOPBasedSingletonContainer} will
+    * delegate the calls to
+    */
+   private SingletonContainer simpleSingletonContainer;]]>
+            </programlisting>
+            The only reason why the AOPBasedSingletonContainer *is a* org.jboss.ejb3.EJBContainer (old jboss-ejb3-core) is because
+            the existing AOP based interceptor framework expects the container to be of type org.jboss.ejb3.EJBContainer. Once we 
+            have moved away from AOP based interceptors to completely use the new container spi, we can get rid of relying on the old
+            containers.
+        </para>
+        <para>
+            The AOPBasedSingletonContainer is responsible for the following:
+            <itemizedlist>
+                <listitem>
+                    <para>Create a instance of the new SPI based <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/impl/src/main/java/org/jboss/ejb3/singleton/impl/container/SingletonContainer.java">SingletonContainer</ulink></para>
+                </listitem>
+                <listitem>
+                    <para>The SingletonContainer thus created will be passed an <ulink url="http://anonsvn.jboss.org/repos/jbossas/projects/ejb3/components/singleton/trunk/aop-impl/src/main/java/org/jboss/ejb3/singleton/aop/impl/AOPBasedInterceptorRegistry.java">AOPBasedInterceptorRegistry</ulink>
+                    The AOPBasedInterceptorRegistry uses a AOP backed interceptor stack for intercepting the calls to the bean instance.</para> 
+                </listitem>
+                <listitem>
+                    <para>Delegate all runtime calls to the new SPI based SingletonContainer (ex: invocation on the bean instance, bean instance
+                creation etc...)
+                </para>
+                </listitem>
+                <listitem>
+                    <para>Act as an entry point to any remoting/AOP based calls into the container (the dynamicInvoke method).
+                        <note><para>This may no longer be true because of the way the invocation handler on the proxy and the RemotingContiner
+                        is implemented (i.e. AOP is no longer used for a remote invocation on the container).</para></note>
+                    </para>
+                </listitem>
+            </itemizedlist>
+        </para>
+    </sect1>
+</chapter>

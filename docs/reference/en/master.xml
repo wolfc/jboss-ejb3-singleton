@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding="iso-8859-1"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+
+<book lang="en">
+          <title>JBoss EJB3.x Singleton</title>
+    <bookinfo>
+        <title>JBoss EJB 3.x Singleton Reference Documentation</title>
+        <subtitle>JBoss EJB 3.x Singleton Reference Documentation</subtitle>
+        <releaseinfo>1.0.0</releaseinfo>
+        <!--<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="Author_Group.xml"/> -->
+    </bookinfo>
+    
+    <toc/>
+    
+    <preface id="preface" revision="1">
+        <title>Preface</title>
+        
+        <para>
+            This is a reference documentation for the JBoss EJB3.x Singleton container implementation
+        </para>
+        
+        
+    </preface>
+    
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="intro.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="proxy.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="jbremoting.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="container.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ejb3deployment.xml"/>
+</book>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JBoss EJB3.1 no-interface testsuite setup" default="install-no-interface-package">
+	
+	<property environment="env"/>
+	<!-- Enforce JBOSS_HOME -->
+	<fail unless="env.JBOSS_HOME" message="JBOSS_HOME not set"/>
+	<property name="JBOSS_HOME" value="${env.JBOSS_HOME}"/>
+
+	<property name="location.target" value="${basedir}/target"/>
+  	<property name="location.dependencies" value="${location.target}/dependencies"/>
+  	<property name="location.packagemanager" value="${location.dependencies}/package-manager"/>
+	<property name="location.packagemanager.zip.file" value="${location.packagemanager}/jboss-ejb3-package-manager-installer.zip"/>
+  	<property name="location.singleton.packages" value="${location.dependencies}/packages"/>
+	<property name="location.singleton.deployer.package" value="${location.singleton.packages}/jboss-ejb3-singleton-deployer-package.jar"/>
+	<property name="location.singleton.aop.impl.package" value="${location.singleton.packages}/jboss-ejb3-singleton-aop-impl-package.jar"/>
+	<property name="location.singleton.impl.package" value="${location.singleton.packages}/jboss-ejb3-singleton-impl-package.jar"/>
+	<property name="location.singleton.proxy.impl.package" value="${location.singleton.packages}/jboss-ejb3-singleton-proxy-impl-package.jar"/>
+	<property name="packagemanager.home" value="${location.packagemanager}/jboss-package-manager"/>
+
+	<path id="package.manager.classpath">
+	    <fileset dir="${packagemanager.home}/lib" includes="**/*.jar"/>
+	</path>
+	
+	<target name="install-singleton-packages" description="Install singleton component packages into JBoss AS">
+		<!--Unzip the package manager installer -->
+		<antcall target="unzip-package-manager"/>
+		
+		<!-- Setup package manager itself -->
+		<antcall target="setup-package-manager"/>
+
+		<!-- Install the singleton packages through the package manager -->
+		<echo>Installing singleton deployer package</echo>
+		<java classname="org.jboss.ejb3.packagemanager.main.Main" classpathref="package.manager.classpath" fork="true">
+			
+			<!-- package manager home -->
+			<arg value="-p"/>
+			<arg value="${packagemanager.home}"/>
+			<!-- JBoss Home -->
+			<arg value="-s"/>
+			<arg value="${JBOSS_HOME}"/>
+			<arg value="-u"/>
+			<arg value="${location.singleton.deployer.package}"/>
+		</java>
+		<echo>Installing singleton aop package</echo>
+		<java classname="org.jboss.ejb3.packagemanager.main.Main" classpathref="package.manager.classpath" fork="true">
+			
+			<!-- package manager home -->
+			<arg value="-p"/>
+			<arg value="${packagemanager.home}"/>
+			<!-- JBoss Home -->
+			<arg value="-s"/>
+			<arg value="${JBOSS_HOME}"/>
+			<arg value="-u"/>
+			<arg value="${location.singleton.aop.impl.package}"/>
+		</java>
+		<echo>Installing singleton impl package</echo>
+		<java classname="org.jboss.ejb3.packagemanager.main.Main" classpathref="package.manager.classpath" fork="true">
+			
+			<!-- package manager home -->
+			<arg value="-p"/>
+			<arg value="${packagemanager.home}"/>
+			<!-- JBoss Home -->
+			<arg value="-s"/>
+			<arg value="${JBOSS_HOME}"/>
+			<arg value="-u"/>
+			<arg value="${location.singleton.impl.package}"/>
+		</java>
+		<echo>Installing singleton proxy package</echo>
+		<java classname="org.jboss.ejb3.packagemanager.main.Main" classpathref="package.manager.classpath" fork="true">
+			
+			<!-- package manager home -->
+			<arg value="-p"/>
+			<arg value="${packagemanager.home}"/>
+			<!-- JBoss Home -->
+			<arg value="-s"/>
+			<arg value="${JBOSS_HOME}"/>
+			<arg value="-u"/>
+			<arg value="${location.singleton.proxy.impl.package}"/>
+		</java>
+
+	</target>
+	
+	<target name="unzip-package-manager">
+		<unzip dest="${location.packagemanager}" src="${location.packagemanager.zip.file}"/>
+	</target>
+
+	<target name="setup-package-manager">
+	
+		<java classname="org.jboss.ejb3.packagemanager.main.Setup" classpathref="package.manager.classpath" fork="true">
+			<!-- package manager home -->
+			<arg value="-p"/>
+			<arg value="${packagemanager.home}"/>
+			<!-- Schema script -->
+			<arg value="-f"/>
+			<arg value="${packagemanager.home}/script/schema.sql"/>
+		</java>
+
+	</target>
+	
+	
+
+</project>
