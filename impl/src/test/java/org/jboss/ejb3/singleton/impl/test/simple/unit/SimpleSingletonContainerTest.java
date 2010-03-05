@@ -28,6 +28,7 @@ import static org.junit.Assert.assertSame;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
@@ -258,7 +259,7 @@ public class SimpleSingletonContainerTest
        * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
        */
       @Override
-      public List<InstanceInjector> getInterceptorInjectors()
+      public Map<Class<?>, List<InstanceInjector>> getInterceptorInjectors()
       {
          // TODO Auto-generated method stub
          return null;
@@ -268,7 +269,7 @@ public class SimpleSingletonContainerTest
        * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
        */
       @Override
-      public void setInterceptorInjectors(List<InstanceInjector> interceptorInjectors)
+      public void setInterceptorInjectors(Map<Class<?>, List<InstanceInjector>> interceptorInjectors)
       {
          // TODO Auto-generated method stub
          

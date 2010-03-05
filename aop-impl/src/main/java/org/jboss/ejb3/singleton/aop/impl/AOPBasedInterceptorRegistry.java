@@ -21,8 +21,9 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jboss.aop.MethodInfo;
 import org.jboss.ejb3.EJBContainerInvocation;
@@ -31,7 +32,6 @@ import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.container.spi.injection.InstanceInjector;
-import org.jboss.ejb3.interceptor.InterceptorInjector;
 
 /**
  * A AOP based implementation of the {@link InterceptorRegistry} for a
@@ -56,7 +56,7 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
     */
    private LegacySingletonBeanContext legacySingletonBeanContext;
 
-   private List<InstanceInjector> interceptorInjectors = new ArrayList<InstanceInjector>();
+   private Map<Class<?>, List<InstanceInjector>> interceptorInjectors = new HashMap<Class<?>, List<InstanceInjector>>();
 
    /**
     * Construct an {@link AOPBasedInterceptorRegistry} for a {@link AOPBasedSingletonContainer}
@@ -154,7 +154,20 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       // instance for any injectable fields
       // TODO: Ideally, this should be split up into separate instantiation and injection
       // calls.
-      legacySingletonBeanContext.initialiseInterceptorInstances();
+      //legacySingletonBeanContext.initialiseInterceptorInstances();
+      for (Class<?> interceptorClass : this.getInterceptorClasses())
+      {
+         Object interceptorInstance = legacySingletonBeanContext.getInterceptor(interceptorClass);
+         List<InstanceInjector> injectors = this.interceptorInjectors.get(interceptorClass);
+         if (injectors == null)
+         {
+            continue;
+         }
+         for (InstanceInjector injector : injectors)
+         {
+            injector.inject(legacySingletonBeanContext, interceptorInstance);
+         }
+      }
 
       // invoke post construct lifecycle on the bean/interceptor instances
       this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
@@ -202,7 +215,7 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
     * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
     */
    @Override
-   public List<InstanceInjector> getInterceptorInjectors()
+   public Map<Class<?>, List<InstanceInjector>> getInterceptorInjectors()
    {
       return this.interceptorInjectors;
    }
@@ -211,7 +224,7 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
     * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
     */
    @Override
-   public void setInterceptorInjectors(List<InstanceInjector> interceptorInjectors)
+   public void setInterceptorInjectors(Map<Class<?>, List<InstanceInjector>> interceptorInjectors)
    {
       this.interceptorInjectors = interceptorInjectors;
 

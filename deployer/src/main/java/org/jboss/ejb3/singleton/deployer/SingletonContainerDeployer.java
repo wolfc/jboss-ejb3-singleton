@@ -106,7 +106,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
       addOutput(BeanMetaData.class);
 
       // ordering
-     // addInput(Ejb3Deployment.class);
+      // addInput(Ejb3Deployment.class);
       // new SPI based EJB3Deployment
       addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
@@ -193,12 +193,12 @@ public class SingletonContainerDeployer extends AbstractDeployer
                + beanMetaData.getEjbName() + " in unit " + unit);
       }
       Hashtable<String, String> ctxProperties = new Hashtable<String, String>();
-//      Ejb3Deployment ejb3Deployment = unit.getAttachment(Ejb3Deployment.class);
-//      if (ejb3Deployment == null)
-//      {
-//         throw new DeploymentException("Could not find " + Ejb3Deployment.class
-//               + " for creating singleton container for bean " + sessionBean.getEjbName() + " in unit " + unit);
-//      }
+      //      Ejb3Deployment ejb3Deployment = unit.getAttachment(Ejb3Deployment.class);
+      //      if (ejb3Deployment == null)
+      //      {
+      //         throw new DeploymentException("Could not find " + Ejb3Deployment.class
+      //               + " for creating singleton container for bean " + sessionBean.getEjbName() + " in unit " + unit);
+      //      }
       AOPBasedSingletonContainer singletonContainer = null;
       try
       {
@@ -213,7 +213,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
 
       // Register the newly created container with the new SPI based EJB3Deployment
       this.registerWithEJB3Deployment(unit, singletonContainer);
-      
+
       String singletonContainerMCBeanName;
       try
       {
@@ -229,35 +229,53 @@ public class SingletonContainerDeployer extends AbstractDeployer
          throw new DeploymentException("Could not obtain a container name for bean " + sessionBean.getName()
                + " in unit " + unit);
       }
-      
+
       // Here we let the injection handlers to setup appropriate dependencies
       // on the container and also create injectors for the container
       singletonContainer.instantiated();
-     // singletonContainer.processMetadata();
+      // singletonContainer.processMetadata();
 
       List<InjectorFactory> injectorFactories = new ArrayList<InjectorFactory>();
-      PersistenceContextInjectorFactory pcInjectorFactory = new PersistenceContextInjectorFactory(unit,this.persistenceUnitResolver);
+      PersistenceContextInjectorFactory pcInjectorFactory = new PersistenceContextInjectorFactory(unit,
+            this.persistenceUnitResolver);
       injectorFactories.add(pcInjectorFactory);
-      List<EJBContainerENCInjector> encInjectors = pcInjectorFactory.createENCInjectors(sessionBean);
-      singletonContainer.setENCInjectors(encInjectors);
-      
+      List<EJBContainerENCInjector> encInjectors = new ArrayList<EJBContainerENCInjector>();
+      encInjectors.addAll(pcInjectorFactory.createENCInjectors(sessionBean));
+      List<InstanceInjector> beanInstanceInjectors = new ArrayList<InstanceInjector>();
 
       try
       {
          Class<?> beanClass = unit.getClassLoader().loadClass(sessionBean.getEjbClass());
-         singletonContainer.setEJBInjectors(this.processMethodAnnotations(beanClass, new HashSet<Method>(),injectorFactories));
+         Set<Method> methods = this.getInjectableMethods(beanClass, new HashSet<Method>(), injectorFactories);
+         for (Method method : methods)
+         {
+            for (InjectorFactory injectorFactory : injectorFactories)
+            {
+               EJBContainerENCInjector encInjector = injectorFactory.createENCInjector(method);
+               if (encInjector != null)
+               {
+                  encInjectors.add(encInjector);
+               }
+               InstanceInjector beanInstanceInjector = injectorFactory.createInstanceInjector(method);
+               if (beanInstanceInjector != null)
+               {
+                  beanInstanceInjectors.add(beanInstanceInjector);
+               }
+            }
+         }
       }
       catch (ClassNotFoundException e)
       {
          throw new RuntimeException(e);
       }
+      singletonContainer.setENCInjectors(encInjectors);
+      singletonContainer.setEJBInjectors(beanInstanceInjectors);
+
       List<DependencyBasedInjector> allInjectors = new ArrayList<DependencyBasedInjector>();
       allInjectors.addAll(singletonContainer.getEJBInjectors());
       allInjectors.addAll(singletonContainer.getENCInjectors());
       this.installContainer(unit, singletonContainerMCBeanName, singletonContainer, allInjectors);
 
-      
-      
       // TODO: This shouldn't be here
       SingletonBeanRemoteJNDIBinder jndiBinder = new SingletonBeanRemoteJNDIBinder(singletonContainer);
       try
@@ -268,7 +286,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
       {
          throw new DeploymentException(e);
       }
-      
+
    }
 
    /**
@@ -369,15 +387,15 @@ public class SingletonContainerDeployer extends AbstractDeployer
       this.persistenceUnitResolver = puResolver;
    }
 
-   private List<InstanceInjector> processMethodAnnotations(Class<?> clazz, Set<Method> visitedMethods,
+   private Set<Method> getInjectableMethods(Class<?> clazz, Set<Method> visitedMethods,
          List<InjectorFactory> injectorFactories)
    {
       if (clazz == null || clazz.equals(Object.class))
       {
-         return Collections.EMPTY_LIST;
+         return Collections.EMPTY_SET;
       }
       Method[] methods = clazz.getDeclaredMethods();
-      List<InstanceInjector> injectors = new ArrayList<InstanceInjector>();
+      //List<InstanceInjector> injectors = new ArrayList<InstanceInjector>();
       for (Method method : methods)
       {
          if (method.getParameterTypes().length != 1)
@@ -392,38 +410,43 @@ public class SingletonContainerDeployer extends AbstractDeployer
             visitedMethods.add(method);
          }
 
-         if (injectorFactories != null)
-         {
-            for (InjectorFactory injectorFactory : injectorFactories)
-            {
-               injectors.add(injectorFactory.createInstanceInjector(method));
-            }
-         }
+         //         if (injectorFactories != null)
+         //         {
+         //            for (InjectorFactory injectorFactory : injectorFactories)
+         //            {
+         //               InstanceInjector injector = injectorFactory.createInstanceInjector(method);
+         //               if (injector != null)
+         //               {
+         //                  injectors.add(injector);
+         //               }
+         //            }
+         //         }
       }
       // recursion needs to come last as the method could be overriden and we don't want the overriding method to be ignored
-      processMethodAnnotations(clazz.getSuperclass(), visitedMethods, injectorFactories);
-      
-      return injectors;
+      getInjectableMethods(clazz.getSuperclass(), visitedMethods, injectorFactories);
+
+      return visitedMethods;
    }
-   
-   
-   private void installContainer(DeploymentUnit unit, String containerMCBeanName, EJBContainer container, List<DependencyBasedInjector> injectors)
+
+   private void installContainer(DeploymentUnit unit, String containerMCBeanName, EJBContainer container,
+         List<DependencyBasedInjector> injectors)
    {
-      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container.getClass().getName());
+      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container
+            .getClass().getName());
       containerBMDBuilder.setConstructorValue(container);
-      
+
       // TODO: Hack! (for quick testing)
       JBossSessionBean31MetaData sessionbean = (JBossSessionBean31MetaData) container.getMetaData();
       String localhome = sessionbean.getLocalHome();
-      containerBMDBuilder.addSupply("Class:"+localhome);
+      containerBMDBuilder.addSupply("Class:" + localhome);
       String remoteHome = sessionbean.getHome();
-      containerBMDBuilder.addSupply("Class:"+remoteHome);
+      containerBMDBuilder.addSupply("Class:" + remoteHome);
       BusinessLocalsMetaData businessLocals = sessionbean.getBusinessLocals();
       if (businessLocals != null)
       {
          for (String businessLocal : businessLocals)
          {
-            containerBMDBuilder.addSupply("Class:"+businessLocal);
+            containerBMDBuilder.addSupply("Class:" + businessLocal);
          }
       }
       BusinessRemotesMetaData businessRemotes = sessionbean.getBusinessRemotes();
@@ -431,23 +454,24 @@ public class SingletonContainerDeployer extends AbstractDeployer
       {
          for (String businessRemote : businessRemotes)
          {
-            containerBMDBuilder.addSupply("Class:"+businessRemote);
+            containerBMDBuilder.addSupply("Class:" + businessRemote);
          }
       }
-      
+
       for (DependencyBasedInjector injector : injectors)
       {
-         BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(injector.toString(), injector.getClass().getName());
+         BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(injector.toString(), injector.getClass()
+               .getName());
          builder.setConstructorValue(injector);
          for (String dep : injector.getDependencies())
          {
             builder.addDependency(dep);
          }
          unit.addAttachment(BeanMetaData.class + ":" + injector.toString(), builder.getBeanMetaData());
-         
+
          containerBMDBuilder.addDependency(injector.toString());
       }
-      
+
       unit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
    }
 }

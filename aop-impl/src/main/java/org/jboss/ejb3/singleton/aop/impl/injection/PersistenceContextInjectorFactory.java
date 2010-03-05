@@ -128,7 +128,10 @@ public class PersistenceContextInjectorFactory implements InjectorFactory
       {
          encName = "env/" + pc.name();
       }
-      return new PersistenceContextEncInjector(encName, puSupplier, pc.type());
+      PersistenceContextEncInjector pcENCInjector = new PersistenceContextEncInjector(encName, puSupplier, pc.type());
+      pcENCInjector.addDependency(puSupplier);
+      
+      return pcENCInjector;
    }
 
 }
