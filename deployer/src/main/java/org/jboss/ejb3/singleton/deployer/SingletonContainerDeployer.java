@@ -32,7 +32,6 @@ import java.util.Set;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import javax.naming.InitialContext;
 
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
@@ -53,7 +52,7 @@ import org.jboss.ejb3.container.spi.injection.InjectorFactory;
 import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.aop.impl.injection.PersistenceContextInjectorFactory;
-import org.jboss.ejb3.singleton.proxy.impl.SingletonBeanRemoteJNDIBinder;
+import org.jboss.ejb3.singleton.spi.ContainerRegistry;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ear.jboss.JBossAppMetaData;
@@ -193,12 +192,6 @@ public class SingletonContainerDeployer extends AbstractDeployer
                + beanMetaData.getEjbName() + " in unit " + unit);
       }
       Hashtable<String, String> ctxProperties = new Hashtable<String, String>();
-      //      Ejb3Deployment ejb3Deployment = unit.getAttachment(Ejb3Deployment.class);
-      //      if (ejb3Deployment == null)
-      //      {
-      //         throw new DeploymentException("Could not find " + Ejb3Deployment.class
-      //               + " for creating singleton container for bean " + sessionBean.getEjbName() + " in unit " + unit);
-      //      }
       AOPBasedSingletonContainer singletonContainer = null;
       try
       {
@@ -229,11 +222,8 @@ public class SingletonContainerDeployer extends AbstractDeployer
          throw new DeploymentException("Could not obtain a container name for bean " + sessionBean.getName()
                + " in unit " + unit);
       }
-
-      // Here we let the injection handlers to setup appropriate dependencies
-      // on the container and also create injectors for the container
-      singletonContainer.instantiated();
-      // singletonContainer.processMetadata();
+      // TODO: Remove this hack
+      ContainerRegistry.INSTANCE.registerContainer(singletonContainerMCBeanName, singletonContainer);
 
       List<InjectorFactory> injectorFactories = new ArrayList<InjectorFactory>();
       PersistenceContextInjectorFactory pcInjectorFactory = new PersistenceContextInjectorFactory(unit,
@@ -275,17 +265,6 @@ public class SingletonContainerDeployer extends AbstractDeployer
       allInjectors.addAll(singletonContainer.getEJBInjectors());
       allInjectors.addAll(singletonContainer.getENCInjectors());
       this.installContainer(unit, singletonContainerMCBeanName, singletonContainer, allInjectors);
-
-      // TODO: This shouldn't be here
-      SingletonBeanRemoteJNDIBinder jndiBinder = new SingletonBeanRemoteJNDIBinder(singletonContainer);
-      try
-      {
-         jndiBinder.bind(new InitialContext());
-      }
-      catch (Exception e)
-      {
-         throw new DeploymentException(e);
-      }
 
    }
 

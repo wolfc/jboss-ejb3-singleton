@@ -31,7 +31,6 @@ import javax.naming.NamingException;
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
-import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
@@ -152,6 +151,11 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
       {
          encInjector.inject(this);
       }
+      
+      if (this.sessionBeanMetaData.isInitOnStartup())
+      {
+         this.instanceManager.create();
+      }
    }
    
    /**
@@ -181,15 +185,6 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
       return this.instanceManager;
    }
 
-   /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#getDeploymentInfo()
-    */
-   @Override
-   public EJBDeploymentInfo getDeploymentInfo()
-   {
-      // TODO: Implement this (and rethink whether we need this method at all)
-      return null;
-   }
 
    /**
     * @see org.jboss.ejb3.container.spi.EJBContainer#getEJBClass()

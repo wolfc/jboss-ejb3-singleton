@@ -33,6 +33,8 @@
       <useProjectArtifact>true</useProjectArtifact>
       <includes>
         <include>org.jboss.ejb3.singleton:jboss-ejb3-singleton-deployer:jar</include>
+        <include>org.jboss.ejb3.proxy:proxy-spi:jar</include>
+        <include>org.jboss.ejb3.proxy:proxy-reflect:jar</include>
       </includes>      
       
     </dependencySet>

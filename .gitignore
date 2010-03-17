@@ -3,3 +3,8 @@
 
 #Ignore Maven generated target folders
 target
+
+# Eclipse files
+.classpath
+.settings
+.project

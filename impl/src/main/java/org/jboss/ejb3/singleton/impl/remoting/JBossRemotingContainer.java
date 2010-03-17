@@ -87,7 +87,7 @@ public class JBossRemotingContainer implements RemotingContainer, Serializable
     * @see org.jboss.ejb3.container.spi.remote.RemotingContainer#invoke(java.io.Serializable, java.lang.reflect.Method, java.lang.Object[], java.lang.Class)
     */
    @Override
-   public Object invoke(Serializable sessionId, Method method, Object[] args, Class<?> businessIntf)
+   public Object invoke(Serializable sessionId, Method method, Object[] args, Class<?> businessIntf) throws Exception
    {
       InvokerLocator locator = null;
       try
@@ -106,7 +106,8 @@ public class JBossRemotingContainer implements RemotingContainer, Serializable
          client = new Client(locator, "SIMPLE");
          // create a container invocation
          String businessIntfClassName = businessIntf == null ? null : businessIntf.getName();
-         ContainerInvocation containerInvocation = new RemotableContainerInvocation(sessionId, method, args, businessIntfClassName);
+         ContainerInvocation containerInvocation = new RemotableContainerInvocation(sessionId, method, args,
+               businessIntfClassName);
          Map payload = new HashMap();
          payload.put("ContainerInvocation", containerInvocation);
 
@@ -114,9 +115,15 @@ public class JBossRemotingContainer implements RemotingContainer, Serializable
          Object response = client.invoke(this.containerRegistryKey, payload);
          return response;
       }
+      catch (Exception e)
+      {
+         // throw Exception(s) as-is
+         throw e;
+      }
       catch (Throwable t)
       {
-         throw new RuntimeException(t);
+         // wrap throwable (errors) as Exception
+         throw new Exception(t);
       }
       finally
       {

@@ -26,11 +26,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.ejb.EJBContext;
-
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.context.spi.EJBContext;
 import org.jboss.ejb3.session.SessionSpecBeanContext;
 
 /**

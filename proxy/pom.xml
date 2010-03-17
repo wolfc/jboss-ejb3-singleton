@@ -26,7 +26,7 @@
     
     <properties>
 
-    	<version.jboss.ejb3.proxy.impl>1.0.6</version.jboss.ejb3.proxy.impl>
+    	
     </properties>
     
     <build>
@@ -64,10 +64,6 @@
             <version>${project.version}</version>
         </dependency>
 	
-	
-       
-        
-        
         
         <!-- ***************************** -->
         <!--  Test dependencies -->

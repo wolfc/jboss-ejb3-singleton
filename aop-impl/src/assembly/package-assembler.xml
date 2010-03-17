@@ -34,6 +34,9 @@
       <includes>
         <include>org.jboss.ejb3.singleton:jboss-ejb3-singleton-aop-impl:jar</include>
         <include>org.jboss.ejb3:jboss-ejb3-core:jar</include>
+        <include>org.jboss.ejb3.concurrency:jboss-ejb3-concurrency-aop:jar</include>
+        <include>org.jboss.ejb3.concurrency:jboss-ejb3-concurrency-impl:jar</include>
+        <include>org.jboss.metadata:jboss-metadata-ejb:jar</include>
       </includes>      
       
     </dependencySet>

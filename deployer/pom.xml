@@ -26,7 +26,7 @@
     
     <properties>
         <version.org.jboss.deployers>2.0.8.GA</version.org.jboss.deployers>
-        <version.jboss.metadata.ejb>2.0.0-alpha-6</version.jboss.metadata.ejb>
+        <version.ejb3.reflect.proxy>1.0.0-alpha-1</version.ejb3.reflect.proxy>
     </properties>
     
     <build>
@@ -69,6 +69,12 @@
             <version>${project.version}</version>
         </dependency>
         
+        <dependency>
+            <groupId>org.jboss.ejb3.proxy</groupId>
+            <artifactId>proxy-reflect</artifactId>
+            <version>${version.ejb3.reflect.proxy}</version>
+        </dependency>
+
         
         <!-- JBoss deployers -->
         <dependency>
@@ -86,7 +92,6 @@
         <dependency>
             <groupId>org.jboss.metadata</groupId>
             <artifactId>jboss-metadata-ejb</artifactId>
-            <version>${version.jboss.metadata.ejb}</version>
         </dependency>
         
         <!-- Get rid of this! it's required for ServiceMBeanSupport class

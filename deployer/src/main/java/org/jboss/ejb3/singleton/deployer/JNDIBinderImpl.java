@@ -19,32 +19,56 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.proxy.spi;
+package org.jboss.ejb3.singleton.deployer;
 
-import java.lang.reflect.InvocationHandler;
+import javax.naming.Context;
+import javax.naming.NamingException;
+
+import org.jboss.beans.metadata.api.annotations.Start;
+import org.jboss.beans.metadata.api.annotations.Stop;
+import org.jboss.util.naming.Util;
 
 /**
- * A {@link ProxyFactory} is responsible for creating proxies which are castable to
- * the {@link Class}(es) specified in the {@link ProxyCreationContext#getTypes()} 
- * <p>
- *  Implementations of {@link ProxyFactory} can expect more contextual information
- *  for proxy creation, through custom {@link ProxyCreationContext}. 
- * </p>
+ * JNDIBinderImpl
  *
- * @see ProxyCreationContext#getTypes()
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public interface ProxyFactory 
+public class JNDIBinderImpl
 {
 
-   /**
-    * Creates and returns a proxy which is castable to the {@link Class}(es) specified in the passed
-    * <code>proxyCreationContext</code>.
-    * 
-    * @param proxyCreationContext Contextual information for creating of proxies
-    * @return Returns a proxy which is castable to the {@link Class}(es) specified in the passed <code>proxyCreationContext</code>
-    * @see ProxyCreationContext#getTypes()
-    */
-   Object createProxy(Class<?>[] interfaces, InvocationHandler invocationHandler);
+   private Context context;
+
+   private String jndiName;
+
+   private Object jndiObject;
+
+   public JNDIBinderImpl(Context ctx, String jndiName, Object objectToBind)
+   {
+      this.context = ctx;
+      this.jndiName = jndiName;
+      this.jndiObject = objectToBind;
+   }
+
+   @Start
+   public void start() throws Exception
+   {
+      this.bind();
+   }
+
+   @Stop
+   public void stop() throws Exception
+   {
+      this.unbind();
+   }
+
+   public void bind() throws NamingException
+   {
+      Util.rebind(this.context, this.jndiName, this.jndiObject);
+   }
+
+   public void unbind() throws NamingException
+   {
+      Util.unbind(this.context, this.jndiName);
+   }
 }

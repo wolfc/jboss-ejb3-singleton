@@ -19,32 +19,21 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.proxy.impl;
+package org.jboss.ejb3.singleton.integration.test.concurrency;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-
-import org.jboss.ejb3.proxy.spi.ProxyFactory;
+import java.util.List;
 
 /**
- * SingletonProxyFactory
+ * CallRegistry
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class SingletonProxyFactory implements ProxyFactory
+public interface CallRegistry
 {
+   public void call(String recipient, long durationInMilliSec);
 
-   /**
-    * @see org.jboss.ejb3.proxy.spi.ProxyFactory#createProxy(java.lang.Class<?>[], java.lang.reflect.InvocationHandler)
-    */
-   @Override
-   public Object createProxy(Class<?>[] interfaces, InvocationHandler invocationHandler)
-   {
-      ClassLoader cl = interfaces[0].getClassLoader();
-      return Proxy.newProxyInstance(cl, interfaces, invocationHandler);
-   }
+   public List<String> getCallSequence();
 
-   
-
+   public void backupCallSequence();
 }

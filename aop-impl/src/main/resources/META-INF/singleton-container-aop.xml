@@ -2,6 +2,8 @@
 
 <aop xmlns="urn:jboss:aop-beans:1.0">
 
+    <interceptor factory="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory" scope="PER_INSTANCE"/>
+    
    <domain name="Singleton Bean" extends="Intercepted Bean" inheritBindings="true">
       <bind pointcut="execution(public * *->*(..))">
          <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
@@ -20,6 +22,8 @@
          <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
          <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
          <stack-ref name="EJBInterceptors"/>
+         <!-- container concurrency management -->
+         <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
       </bind>
    </domain>
 

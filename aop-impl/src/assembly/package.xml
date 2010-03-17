@@ -29,6 +29,9 @@
   <file name="jboss-ejb3-singleton-aop-impl.jar" dest-path="common/lib" type="library"/>
   <!-- Hack -->
   <file name="jboss-ejb3-core.jar" dest-path="common/lib" type="library"/>
+  <file name="jboss-ejb3-concurrency-aop.jar" dest-path="common/lib" type="library"/>
+  <file name="jboss-ejb3-concurrency-impl.jar" dest-path="common/lib" type="library"/>
+  <file name="jboss-metadata-ejb.jar" dest-path="common/lib" type="library"/>
   
   <!--  The xml file containing the AOP interceptors -->
   <file name="singleton-container-aop.xml" dest-path="server/default/deploy" type="config"/>

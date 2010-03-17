@@ -106,15 +106,23 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       // set the target bean context of the AOP invocation
       invocation.setBeanContext(this.legacySingletonBeanContext);
 
-      try
-      {
+      
          // fire the AOP invocation
-         return invocation.invokeNext();
-      }
-      catch (Throwable t)
-      {
-         throw new RuntimeException(t);
-      }
+         try
+         {
+            return invocation.invokeNext();
+         }
+         catch (Exception e)
+         {
+            // throw Exception(s) as-is
+            throw e;
+         }
+         catch (Throwable t)
+         {
+            // wrap throwable (errors) as Exception
+            throw new Exception(t);
+         }
+      
    }
 
    /**

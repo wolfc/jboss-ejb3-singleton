@@ -47,16 +47,18 @@ import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
-import org.jboss.ejb3.container.spi.EJBDeploymentInfo;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
 import org.jboss.ejb3.container.spi.injection.InstanceInjector;
+import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
 import org.jboss.ejb3.session.SessionSpecContainer;
+import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.AccessTimeoutMetaDataBridge;
+import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaDataBridge;
+import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
-import org.jboss.injection.InjectionContainer;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 
@@ -73,7 +75,7 @@ import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements InjectionContainer, EJBContainer
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer
 {
 
    /**
@@ -121,12 +123,33 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
          Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData) throws ClassNotFoundException
    {
-      super(cl, beanClassName, ejbName, domain, ctxProperties, null, beanMetaData);
+      super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData);
       // create a AOP based interceptor registry which will be used by the container
       InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
       // create the new jboss-ejb3-container-spi based singleton container
       this.delegate = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
 
+   }
+
+   /**
+    * This method first setups the common metadata bridges, by calling super.initMetaDataBasedAnnotationRepository().
+    * It then adds the following metadata bridges to the {@link AnnotationRepositoryToMetaData}:
+    * <ul>
+    *   <li> {@link ConcurrencyTypeMetaDataBridge} </li>
+    *   <li> {@link LockMetaDataBridge} </li>
+    *   <li> {@link AccessTimeoutMetaDataBridge} </li>
+    * </ul>
+    * @see org.jboss.ejb3.EJBContainer#initMetaDataBasedAnnotationRepository()
+    * 
+    */
+   @Override
+   protected void initMetaDataBasedAnnotationRepository()
+   {
+      super.initMetaDataBasedAnnotationRepository();
+      // setup singleton container specific metadata bridges
+      this.metadataBasedAnnotationRepo.addMetaDataBridge(new ConcurrencyTypeMetaDataBridge());
+      this.metadataBasedAnnotationRepo.addMetaDataBridge(new LockMetaDataBridge());
+      this.metadataBasedAnnotationRepo.addMetaDataBridge(new AccessTimeoutMetaDataBridge());
    }
 
    /**
@@ -262,7 +285,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     */
    @Override
    public Object invoke(Serializable session, Class<?> invokedBusinessInterface, Method method, Object[] args)
-         throws Throwable
+         throws Exception
    {
       // create a (AOP) MethodInfo first so that a AOP based container invocation can be created out of it
       long hash = MethodHashing.calculateHash(method);
@@ -326,7 +349,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       throw new UnsupportedOperationException("NYI");
    }
 
-   /* (non-Javadoc)
+   /**
     * @see org.jboss.ejb3.session.SessionContainer#localInvoke(java.lang.Object, java.lang.reflect.Method, java.lang.Object[])
     */
    @Override
@@ -335,7 +358,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       throw new UnsupportedOperationException("NYI");
    }
 
-   /* (non-Javadoc)
+   /**
     * @see org.jboss.ejb3.session.SessionContainer#removeHandle(javax.ejb.Handle)
     */
    @Override
@@ -409,29 +432,14 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    }
 
    /**
-    * @see EJBContainer#getDeploymentInfo()
-    */
-   @Override
-   public EJBDeploymentInfo getDeploymentInfo()
-   {
-      return this.delegate.getDeploymentInfo();
-   }
-
-   /**
     * @see EJBContainer#invoke(ContainerInvocation)
     */
    @Override
    public Object invoke(ContainerInvocation containerInvocation) throws Exception
    {
-      try
-      {
          return this.invoke((Serializable) null, containerInvocation.getInvokedBusinessInterface(), containerInvocation
-               .getMethod(), containerInvocation.getArgs());
-      }
-      catch (Throwable t)
-      {
-         throw new Exception(t);
-      }
+            .getMethod(), containerInvocation.getArgs());
+      
    }
 
    /**
@@ -496,6 +504,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       {
          throw new RuntimeException(e);
       }
+
    }
 
    /**
@@ -543,4 +552,5 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       this.delegate.setENCInjectors(encInjectors);
 
    }
+
 }
