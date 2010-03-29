@@ -62,7 +62,8 @@ import org.jboss.remoting.InvokerLocator;
 import org.jboss.remoting.transport.Connector;
 
 /**
- * SingletonBeanJNDIRegistrar
+ * TODO: This is a WIP. Most of the implementation here is 
+ * going to change.
  *
  * @author Jaikiran Pai
  * @version $Revision: $
@@ -278,6 +279,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractDeployer
          }
          allLocalinterfaces.add(businessLocalIntf);
 
+         // TODO: We don't require remote container for local interfaces!
          RemotingContainer remotingContainer = new JBossRemotingContainer(containerRegistryKey,
                defaultInvokerLocatorURL);
          InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(remotingContainer,

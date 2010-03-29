@@ -19,7 +19,7 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.aop.impl;
+package org.jboss.ejb3.singleton.aop.impl.context;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -31,6 +31,7 @@ import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.context.spi.EJBContext;
 import org.jboss.ejb3.session.SessionSpecBeanContext;
+import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 
 /**
  * LegacySingletonBeanContext
@@ -38,7 +39,7 @@ import org.jboss.ejb3.session.SessionSpecBeanContext;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedSingletonContainer>
+public class SingletonBeanContext extends SessionSpecBeanContext<AOPBasedSingletonContainer>
       implements
          BeanContext
 {
@@ -46,20 +47,24 @@ public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedS
 
    private Map<Class<?>, Object> interceptorInstances = new HashMap<Class<?>, Object>();
 
-   public LegacySingletonBeanContext(AOPBasedSingletonContainer aopBasedSingletonContainer, BeanContext context)
+   public SingletonBeanContext(AOPBasedSingletonContainer aopBasedSingletonContainer, BeanContext context)
    {
       super(aopBasedSingletonContainer, context.getBeanInstance());
       this.aopBasedSingletonContainer = aopBasedSingletonContainer;
       this.initInterceptorInstances();
    }
 
-   /* (non-Javadoc)
+   /**
     * @see org.jboss.ejb3.session.SessionBeanContext#getEJBContext()
     */
    @Override
    public EJBContext getEJBContext()
    {
-      throw new RuntimeException("Not yet implemented");
+      if (this.ejbContext == null)
+      {
+         this.ejbContext = new SingletonSessionContext(this);
+      }
+      return this.ejbContext;
    }
 
    /* (non-Javadoc)

@@ -21,24 +21,17 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Set;
-
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
+import java.util.Map;
 
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.beans.metadata.api.annotations.Inject;
 import org.jboss.beans.metadata.spi.BeanMetaData;
-import org.jboss.beans.metadata.spi.builder.BeanMetaDataBuilder;
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.DeploymentStages;
 import org.jboss.deployers.spi.deployer.helpers.AbstractDeployer;
@@ -46,23 +39,19 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.deployment.EJB3Deployment;
-import org.jboss.ejb3.container.spi.injection.DependencyBasedInjector;
-import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
-import org.jboss.ejb3.container.spi.injection.InjectorFactory;
-import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
-import org.jboss.ejb3.singleton.aop.impl.injection.PersistenceContextInjectorFactory;
 import org.jboss.ejb3.singleton.spi.ContainerRegistry;
-import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
+import org.jboss.injection.inject.naming.InjectionProcessor;
+import org.jboss.injection.inject.spi.Injector;
+import org.jboss.injection.resolve.spi.EnvironmentMetaDataVisitor;
 import org.jboss.logging.Logger;
-import org.jboss.metadata.ear.jboss.JBossAppMetaData;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeansMetaData;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
-import org.jboss.metadata.ejb.jboss.JBossSessionBeanMetaData;
-import org.jboss.metadata.ejb.spec.BusinessLocalsMetaData;
-import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
+import org.jboss.metadata.ejb.spec.InterceptorMetaData;
+import org.jboss.metadata.ejb.spec.InterceptorsMetaData;
+import org.jboss.metadata.javaee.spec.ResourceInjectionMetaData;
 
 /**
  * A MC based deployer for deploying a {@link EJBContainer} as a MC bean
@@ -90,7 +79,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
     */
    private static Logger logger = Logger.getLogger(SingletonContainerDeployer.class);
 
-   private PersistenceUnitDependencyResolver persistenceUnitResolver;
+   private List<EnvironmentMetaDataVisitor<ResourceInjectionMetaData>> environmentMetadataVisitors = new ArrayList<EnvironmentMetaDataVisitor<ResourceInjectionMetaData>>();
 
    /**
     * Constructs a {@link SingletonContainerDeployer} for
@@ -192,7 +181,7 @@ public class SingletonContainerDeployer extends AbstractDeployer
                + beanMetaData.getEjbName() + " in unit " + unit);
       }
       Hashtable<String, String> ctxProperties = new Hashtable<String, String>();
-      AOPBasedSingletonContainer singletonContainer = null;
+      AOPBasedSingletonContainer singletonContainer;
       try
       {
          singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean
@@ -200,72 +189,50 @@ public class SingletonContainerDeployer extends AbstractDeployer
       }
       catch (ClassNotFoundException cnfe)
       {
-         throw new DeploymentException("Could not find class during deployment of bean named "
-               + sessionBean.getEjbName() + " in unit " + unit, cnfe);
+         throw new DeploymentException(cnfe);
       }
 
       // Register the newly created container with the new SPI based EJB3Deployment
       this.registerWithEJB3Deployment(unit, singletonContainer);
 
-      String singletonContainerMCBeanName;
-      try
-      {
-         // get the name for the MC bean 
-         singletonContainerMCBeanName = this.getContainerName(unit, sessionBean);
-
-         //TODO: One more ugly hack (to allow backward compatibility)
-         // Webservices expects the metadata to provide container name
-         sessionBean.setContainerName(singletonContainerMCBeanName);
-      }
-      catch (MalformedObjectNameException e)
-      {
-         throw new DeploymentException("Could not obtain a container name for bean " + sessionBean.getName()
-               + " in unit " + unit);
-      }
       // TODO: Remove this hack
-      ContainerRegistry.INSTANCE.registerContainer(singletonContainerMCBeanName, singletonContainer);
-
-      List<InjectorFactory> injectorFactories = new ArrayList<InjectorFactory>();
-      PersistenceContextInjectorFactory pcInjectorFactory = new PersistenceContextInjectorFactory(unit,
-            this.persistenceUnitResolver);
-      injectorFactories.add(pcInjectorFactory);
-      List<EJBContainerENCInjector> encInjectors = new ArrayList<EJBContainerENCInjector>();
-      encInjectors.addAll(pcInjectorFactory.createENCInjectors(sessionBean));
-      List<InstanceInjector> beanInstanceInjectors = new ArrayList<InstanceInjector>();
+      ContainerRegistry.INSTANCE.registerContainer(sessionBean.getContainerName(), singletonContainer);
 
       try
       {
-         Class<?> beanClass = unit.getClassLoader().loadClass(sessionBean.getEjbClass());
-         Set<Method> methods = this.getInjectableMethods(beanClass, new HashSet<Method>(), injectorFactories);
-         for (Method method : methods)
-         {
-            for (InjectorFactory injectorFactory : injectorFactories)
-            {
-               EJBContainerENCInjector encInjector = injectorFactory.createENCInjector(method);
-               if (encInjector != null)
-               {
-                  encInjectors.add(encInjector);
-               }
-               InstanceInjector beanInstanceInjector = injectorFactory.createInstanceInjector(method);
-               if (beanInstanceInjector != null)
-               {
-                  beanInstanceInjectors.add(beanInstanceInjector);
-               }
-            }
-         }
+         this.createInjectors(singletonContainer);
       }
-      catch (ClassNotFoundException e)
+      catch (Exception e)
       {
-         throw new RuntimeException(e);
+         throw new DeploymentException("Could not process deployment unit " + unit + " for injectors", e);
       }
-      singletonContainer.setENCInjectors(encInjectors);
-      singletonContainer.setEJBInjectors(beanInstanceInjectors);
+   }
 
-      List<DependencyBasedInjector> allInjectors = new ArrayList<DependencyBasedInjector>();
-      allInjectors.addAll(singletonContainer.getEJBInjectors());
-      allInjectors.addAll(singletonContainer.getENCInjectors());
-      this.installContainer(unit, singletonContainerMCBeanName, singletonContainer, allInjectors);
+   private void createInjectors(EJBContainer ejbContainer) throws Exception
+   {
+      String ejbName = ejbContainer.getEJBName();
+      JBossEnterpriseBeanMetaData beanMetadata = ejbContainer.getMetaData();
+      ClassLoader containerClassLoader = ejbContainer.getClassLoader();
 
+      InjectionProcessor injectionProcessor = new InjectionProcessor(this.getEnvironmentInjectionVisitors());
+      // TODO: We need to add dependency so that we get get the correct ENC for the container
+      List<Injector<Object>> beanInstanceInjectors = injectionProcessor.process(ejbContainer.getENC(),
+            containerClassLoader, beanMetadata);
+      ejbContainer.setEJBInjectors(beanInstanceInjectors);
+
+      // now create injectors for interceptors
+      ClassLoader containerCL = ejbContainer.getClassLoader();
+      InterceptorsMetaData interceptorsMetadata = JBossMetaData.getInterceptors(ejbName, beanMetadata
+            .getJBossMetaData());
+      Map<Class<?>, List<Injector<Object>>> interceptorInjectors = new HashMap<Class<?>, List<Injector<Object>>>();
+      for (InterceptorMetaData interceptorMetadata : interceptorsMetadata)
+      {
+         List<Injector<Object>> interceptorInstanceInjectors = injectionProcessor.process(ejbContainer.getENC(),
+               containerClassLoader, interceptorMetadata);
+         Class<?> interceptorClass = containerCL.loadClass(interceptorMetadata.getInterceptorClass());
+         interceptorInjectors.put(interceptorClass, interceptorInstanceInjectors);
+      }
+      ejbContainer.getInterceptorRegistry().setInterceptorInjectors(interceptorInjectors);
    }
 
    /**
@@ -280,76 +247,6 @@ public class SingletonContainerDeployer extends AbstractDeployer
       // and other stuff
    }
 
-   /**
-    * Ultimately, the container name should come from the <code>sessionBeanMetadata</code>.
-    * However because of the current behaviour where the container on its start sets the containername
-    * in the metadata, its not possible to get this information even before the container is started.
-    *
-    * Hence let's for the time being create the container name from all the information that we have
-    * in the <code>unit</code>
-    *
-    * @param unit The deployment unit
-    * @param sessionBeanMetadata Session bean metadata
-    * @return Returns the container name for the bean corresponding to the <code>sessionBeanMetadata</code> in the <code>unit</code>
-    *
-    * @throws MalformedObjectNameException
-    */
-   private String getContainerName(DeploymentUnit unit, JBossSessionBeanMetaData sessionBeanMetadata)
-         throws MalformedObjectNameException
-   {
-      // TODO the base ejb3 jmx object name comes from Ejb3Module.BASE_EJB3_JMX_NAME, but
-      // we don't need any reference to ejb3-core. Right now just hard code here, we need
-      // a better way/place for this later
-      StringBuilder containerName = new StringBuilder("jboss.j2ee:service=EJB3" + ",");
-
-      // Get the top level unit for this unit (ex: the top level might be an ear and this unit might be the jar
-      // in that ear
-      DeploymentUnit toplevelUnit = unit.getTopLevel();
-      if (toplevelUnit != null)
-      {
-         // if top level is an ear, then create the name with the ear reference
-         if (isEar(toplevelUnit))
-         {
-            containerName.append("ear=");
-            containerName.append(toplevelUnit.getSimpleName());
-            containerName.append(",");
-
-         }
-      }
-      // now work on the passed unit, to get the jar name
-      if (unit.getSimpleName() == null)
-      {
-         containerName.append("*");
-      }
-      else
-      {
-         containerName.append("jar=");
-         containerName.append(unit.getSimpleName());
-      }
-      // now the ejbname
-      containerName.append(",name=");
-      containerName.append(sessionBeanMetadata.getEjbName());
-
-      if (logger.isTraceEnabled())
-      {
-         logger.trace("Container name generated for ejb = " + sessionBeanMetadata.getEjbName() + " in unit " + unit
-               + " is " + containerName);
-      }
-      ObjectName containerJMXName = new ObjectName(containerName.toString());
-      return containerJMXName.getCanonicalName();
-   }
-
-   /**
-    * Returns true if this <code>unit</code> represents an .ear deployment
-    *
-    * @param unit
-    * @return
-    */
-   private boolean isEar(DeploymentUnit unit)
-   {
-      return unit.getSimpleName().endsWith(".ear") || unit.getAttachment(JBossAppMetaData.class) != null;
-   }
-
    private void registerWithEJB3Deployment(DeploymentUnit unit, EJBContainer container)
    {
       EJB3Deployment ejb3Deployment = unit.getAttachment(EJB3Deployment.class);
@@ -361,96 +258,15 @@ public class SingletonContainerDeployer extends AbstractDeployer
    }
 
    @Inject
-   public void setPersistenceUnitResolver(PersistenceUnitDependencyResolver puResolver)
+   public void setEnvironmentInjectionVisitors(
+         List<EnvironmentMetaDataVisitor<ResourceInjectionMetaData>> envMetadataVisitors)
    {
-      this.persistenceUnitResolver = puResolver;
+      this.environmentMetadataVisitors = envMetadataVisitors;
    }
 
-   private Set<Method> getInjectableMethods(Class<?> clazz, Set<Method> visitedMethods,
-         List<InjectorFactory> injectorFactories)
+   public List<EnvironmentMetaDataVisitor<ResourceInjectionMetaData>> getEnvironmentInjectionVisitors()
    {
-      if (clazz == null || clazz.equals(Object.class))
-      {
-         return Collections.EMPTY_SET;
-      }
-      Method[] methods = clazz.getDeclaredMethods();
-      //List<InstanceInjector> injectors = new ArrayList<InstanceInjector>();
-      for (Method method : methods)
-      {
-         if (method.getParameterTypes().length != 1)
-            continue;
-
-         if (!Modifier.isPrivate(method.getModifiers()))
-         {
-            if (visitedMethods.contains(method.getName()))
-            {
-               continue;
-            }
-            visitedMethods.add(method);
-         }
-
-         //         if (injectorFactories != null)
-         //         {
-         //            for (InjectorFactory injectorFactory : injectorFactories)
-         //            {
-         //               InstanceInjector injector = injectorFactory.createInstanceInjector(method);
-         //               if (injector != null)
-         //               {
-         //                  injectors.add(injector);
-         //               }
-         //            }
-         //         }
-      }
-      // recursion needs to come last as the method could be overriden and we don't want the overriding method to be ignored
-      getInjectableMethods(clazz.getSuperclass(), visitedMethods, injectorFactories);
-
-      return visitedMethods;
+      return this.environmentMetadataVisitors;
    }
 
-   private void installContainer(DeploymentUnit unit, String containerMCBeanName, EJBContainer container,
-         List<DependencyBasedInjector> injectors)
-   {
-      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container
-            .getClass().getName());
-      containerBMDBuilder.setConstructorValue(container);
-
-      // TODO: Hack! (for quick testing)
-      JBossSessionBean31MetaData sessionbean = (JBossSessionBean31MetaData) container.getMetaData();
-      String localhome = sessionbean.getLocalHome();
-      containerBMDBuilder.addSupply("Class:" + localhome);
-      String remoteHome = sessionbean.getHome();
-      containerBMDBuilder.addSupply("Class:" + remoteHome);
-      BusinessLocalsMetaData businessLocals = sessionbean.getBusinessLocals();
-      if (businessLocals != null)
-      {
-         for (String businessLocal : businessLocals)
-         {
-            containerBMDBuilder.addSupply("Class:" + businessLocal);
-         }
-      }
-      BusinessRemotesMetaData businessRemotes = sessionbean.getBusinessRemotes();
-      if (businessRemotes != null)
-      {
-         for (String businessRemote : businessRemotes)
-         {
-            containerBMDBuilder.addSupply("Class:" + businessRemote);
-         }
-      }
-
-      for (DependencyBasedInjector injector : injectors)
-      {
-         BeanMetaDataBuilder builder = BeanMetaDataBuilder.createBuilder(injector.toString(), injector.getClass()
-               .getName());
-         builder.setConstructorValue(injector);
-         for (String dep : injector.getDependencies())
-         {
-            builder.addDependency(dep);
-         }
-         unit.addAttachment(BeanMetaData.class + ":" + injector.toString(), builder.getBeanMetaData());
-
-         containerBMDBuilder.addDependency(injector.toString());
-      }
-
-      unit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
-   }
 }

@@ -49,8 +49,6 @@ import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
-import org.jboss.ejb3.container.spi.injection.EJBContainerENCInjector;
-import org.jboss.ejb3.container.spi.injection.InstanceInjector;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
@@ -59,6 +57,7 @@ import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.AccessTimeoutMetaDat
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaDataBridge;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
+import org.jboss.injection.inject.spi.Injector;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 
@@ -243,7 +242,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       MethodInfo methodInfo = advisor.getMethodInfo(methodHash);
 
       // create a container invocation
-      AOPBasedContainerInvocationContext containerInvocation = new AOPBasedContainerInvocationContext(methodInfo,
+      AOPBasedContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo,
             methodInvocation.getArguments());
       try
       {
@@ -257,7 +256,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          SerializableMethod invokedMethod = (SerializableMethod) objInvokedMethod;
 
          // push onto stack
-         SessionSpecContainer.invokedMethod.push(invokedMethod);
+//         SessionSpecContainer.invokedMethod.push(invokedMethod);
 
          // pass the control to the simple singleton container
          Object result = this.delegate.invoke(containerInvocation);
@@ -275,7 +274,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       }
       finally
       {
-         SessionSpecContainer.invokedMethod.pop();
+  //       SessionSpecContainer.invokedMethod.pop();
       }
 
    }
@@ -298,19 +297,19 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       }
       SerializableMethod serializableMethod = new SerializableMethod(method, invokedBusinessInterface);
       // create a container invocation
-      ContainerInvocation containerInvocation = new AOPBasedContainerInvocationContext(methodInfo, args);
+      ContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo, args);
 
       try
       {
          // TODO: Legacy push/pop copied from StatelessContainer/SessionSpecContainer
-         SessionSpecContainer.invokedMethod.push(serializableMethod);
+      //   SessionSpecContainer.invokedMethod.push(serializableMethod);
          // pass the control to the simple singleton container
          return this.delegate.invoke(containerInvocation);
 
       }
       finally
       {
-         SessionSpecContainer.invokedMethod.pop();
+       //  SessionSpecContainer.invokedMethod.pop();
       }
 
    }
@@ -511,7 +510,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @see org.jboss.ejb3.container.spi.EJBContainer#setEJBInjectors(java.util.List)
     */
    @Override
-   public void setEJBInjectors(List<InstanceInjector> injectors)
+   public void setEJBInjectors(List<Injector<Object>> injectors)
    {
       this.delegate.setEJBInjectors(injectors);
 
@@ -520,7 +519,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    /**
     * @see org.jboss.ejb3.EJBContainer#getInjectors()
     */
-   public List<InstanceInjector> getEJBInjectors()
+   public List<Injector<Object>> getEJBInjectors()
    {
       return this.delegate.getEJBInjectors();
    }
@@ -533,24 +532,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       return this.delegate.getENC();
    }
-
-   /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#getENCInjectors()
-    */
-   @Override
-   public List<EJBContainerENCInjector> getENCInjectors()
-   {
-      return this.delegate.getENCInjectors();
-   }
-
-   /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#setENCInjectors(java.util.List)
-    */
-   @Override
-   public void setENCInjectors(List<EJBContainerENCInjector> encInjectors)
-   {
-      this.delegate.setENCInjectors(encInjectors);
-
-   }
+   
 
 }

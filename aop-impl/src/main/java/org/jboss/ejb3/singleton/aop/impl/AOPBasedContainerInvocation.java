@@ -35,7 +35,7 @@ import org.jboss.ejb3.container.spi.ContainerInvocation;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedContainerInvocationContext implements ContainerInvocation
+public class AOPBasedContainerInvocation implements ContainerInvocation
 {
 
    /**
@@ -65,12 +65,12 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    private Map<Object, Object> responseContextInfo = new HashMap<Object, Object>();
 
    /**
-    * Creates a {@link AOPBasedContainerInvocationContext}
+    * Creates a {@link AOPBasedContainerInvocation}
     * 
     * @param method The AOP method
     * @param args The arguments to the method
     */
-   public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args)
+   public AOPBasedContainerInvocation(MethodInfo aopMethodInfo, Object[] args)
    {
       this.aopMethodInfo = aopMethodInfo;
       this.args = args;
@@ -81,13 +81,13 @@ public class AOPBasedContainerInvocationContext implements ContainerInvocation
    }
    
    /**
-    * Constructs a {@link AOPBasedContainerInvocationContext}
+    * Constructs a {@link AOPBasedContainerInvocation}
     * 
     * @param method The AOP method
     * @param args Arguments to the method
     * @param businessInterface The business interface on which the method was invoked
     */
-   public AOPBasedContainerInvocationContext(MethodInfo aopMethodInfo, Object[] args, Class<?> businessInterface)
+   public AOPBasedContainerInvocation(MethodInfo aopMethodInfo, Object[] args, Class<?> businessInterface)
    {
       this(aopMethodInfo, args);
       this.businessInterface = businessInterface;

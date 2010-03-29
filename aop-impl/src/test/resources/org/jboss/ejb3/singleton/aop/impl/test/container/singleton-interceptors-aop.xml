@@ -31,6 +31,7 @@
 
    <aspect name="InjectInterceptorsFactory" factory="org.jboss.ejb3.interceptors.aop.InjectInterceptorsFactory" scope="PER_JOINPOINT"/>
    <aspect name="InvocationContextInterceptor" class="org.jboss.ejb3.interceptors.aop.InvocationContextInterceptor" scope="PER_VM"/>
+   <interceptor name="CurrentInvocationContextInterceptor" class="org.jboss.ejb3.core.context.CurrentInvocationContextInterceptor" scope="PER_VM"/>
 
    <domain name="Intercepted Bean">
       <pointcut name="beanAroundInvokeCallbackMethods" expr="execution(* @org.jboss.ejb3.interceptors.ManagedObject->@javax.interceptor.AroundInvoke(..))"/>
@@ -42,9 +43,6 @@
 
       <!-- Setup AOP interceptors based on spec interceptors -->
       <bind pointcut="construction(@org.jboss.ejb3.interceptors.ManagedObject->new(..))">
-         <!-- interceptor-ref name="LoggingInterceptor"/ -->
-         <!-- TODO: we don't need invocation context here -->
-         <!-- TODO: we do until we've seperated the post constructs -->
          <advice name="setup" aspect="InvocationContextInterceptor"/>
       </bind>
 
@@ -61,6 +59,11 @@
          <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
          <interceptor-ref name="org.jboss.ejb3.BlockContainerShutdownInterceptor"/>
       </bind>
+
+      <stack name="InjectionCallbackStack">
+         <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
+         <interceptor-ref name="CurrentInvocationContextInterceptor"/>
+      </stack>
 
       <stack name="LifecycleCallbackStack">
          <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
@@ -90,13 +93,5 @@
          <stack-ref name="EJBInterceptors"/>
       </bind>
    </domain>
-<!--    <domain name="Singleton Bean">
-      <bind pointcut="execution(public * *->*(..))">
-        <interceptor-ref name="org.jboss.ejb3.interceptor.EJB3TCCLInterceptor"/>
-      </bind>
-      
-   </domain>
- -->
-   
 
 </aop>
