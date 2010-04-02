@@ -19,45 +19,41 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.proxy.impl;
+package org.jboss.ejb3.singleton.aop.impl;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-
-import org.jboss.ejb3.container.spi.remote.RemotingContainer;
+import org.jboss.ejb3.container.spi.BeanContext;
+import org.jboss.ejb3.singleton.aop.impl.context.LegacySingletonBeanContext;
+import org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl;
 
 /**
- * SingletonBeanRemoteInvocationHandler
+ * AOPBasedSingletonInstanceManager
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class SingletonBeanRemoteInvocationHandler implements InvocationHandler, Serializable
+public class AOPBasedSingletonInstanceManager extends SingletonEJBInstanceManagerImpl
 {
 
-   private RemotingContainer remotingContainer;
-   
-   private Class<?> businessInterface;
-   
-   public SingletonBeanRemoteInvocationHandler(RemotingContainer remotingContainer)
-   {
-      this.remotingContainer = remotingContainer;
-   }
-   
-   public SingletonBeanRemoteInvocationHandler(RemotingContainer remotingContainer, Class<?> businessInterface)
-   {
-      this(remotingContainer);
-      this.businessInterface = businessInterface;
-   }
-   
+   private AOPBasedSingletonContainer aopBasedContainer;
+
    /**
-    * @see java.lang.reflect.InvocationHandler#invoke(java.lang.Object, java.lang.reflect.Method, java.lang.Object[])
+    * @param beanClass
+    * @param container
+    * @param lifecycleHandler
+    */
+   public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container)
+   {
+      super(container.getBeanClass(), container, container);
+      this.aopBasedContainer = container;
+   }
+
+   /**
+    * @see org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl#createBeanContext(java.lang.Object)
     */
    @Override
-   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
+   protected BeanContext createBeanContext(Object beanInstance)
    {
-      return this.remotingContainer.invoke(null, method, args, this.businessInterface);
+      return new LegacySingletonBeanContext(this.aopBasedContainer, beanInstance);
    }
 
 }

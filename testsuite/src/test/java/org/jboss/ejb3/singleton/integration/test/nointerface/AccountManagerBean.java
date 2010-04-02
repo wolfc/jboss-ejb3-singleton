@@ -19,67 +19,60 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.integration.test.tx;
+package org.jboss.ejb3.singleton.integration.test.nointerface;
 
+import javax.ejb.EJB;
 import javax.ejb.Remote;
 import javax.ejb.Singleton;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 import org.jboss.ejb3.annotation.RemoteBinding;
 
 /**
- * TxAwareSingletonBean
+ * AccountManagerBean
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
 @Singleton
-@Remote (UserManager.class)
-@RemoteBinding (jndiBinding = TxAwareSingletonBean.JNDI_NAME)
-public class TxAwareSingletonBean implements UserManager
+@Remote(AccountManager.class)
+@RemoteBinding(jndiBinding = AccountManagerBean.JNDI_NAME)
+public class AccountManagerBean implements AccountManager
 {
 
-   public static final String JNDI_NAME = "Tx-UserManagerBean";
-   
-   
-   private EntityManager em;
-   
-   
+   public static final String JNDI_NAME = "AccountManagerSingletonBean";
 
-   /* (non-Javadoc)
-    * @see org.jboss.ejb3.singleton.integration.test.tx.UserManager#createUser(java.lang.String)
+   private int balance = 0;
+
+   @EJB
+   private Calculator calculator;
+
+   /**
+    * @see org.jboss.ejb3.singleton.integration.test.nointerface.AccountManager#balance()
     */
    @Override
-   public long createUser(String userName)
+   public int balance()
    {
-      try
-      {
-         
-         User user = new User(userName);
-         this.em.persist(user);
-         return user.getId();
-      }
-      catch (Exception e)
-      {
-         throw new RuntimeException(e);
-      }
-      
-      
+      return this.balance;
    }
 
    /**
-    * @see org.jboss.ejb3.singleton.integration.test.tx.UserManager#getUser(long)
+    * @see org.jboss.ejb3.singleton.integration.test.nointerface.AccountManager#credit(int)
     */
    @Override
-   public User getUser(long id)
+   public void credit(int amount)
    {
-      return this.em.find(User.class, id);
+      this.balance = this.calculator.add(this.balance, amount);
+
    }
-   
-   @PersistenceContext
-   public void setEntityManager(EntityManager em)
+
+   /**
+    * @see org.jboss.ejb3.singleton.integration.test.nointerface.AccountManager#debit(int)
+    */
+   @Override
+   public void debit(int amount)
    {
-      this.em = em;
+      this.balance = this.calculator.subtract(this.balance, amount);
+
    }
+
 }

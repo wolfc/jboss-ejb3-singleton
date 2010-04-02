@@ -21,9 +21,7 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.jboss.aop.MethodInfo;
 import org.jboss.ejb3.EJBContainerInvocation;
@@ -32,8 +30,7 @@ import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.session.SessionContainerInvocation;
-import org.jboss.ejb3.singleton.aop.impl.context.SingletonBeanContext;
-import org.jboss.injection.inject.spi.Injector;
+import org.jboss.ejb3.singleton.aop.impl.context.LegacySingletonBeanContext;
 
 /**
  * A AOP based implementation of the {@link InterceptorRegistry} for a
@@ -50,15 +47,6 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
     */
    private AOPBasedSingletonContainer aopBasedSingletonContainer;
 
-   /**
-    * A hack actually. Ideally this shouldn't be stored in the interceptor
-    * registry and instead be available through {@link AOPBasedSingletonContainer}.
-    * But right now, i don't see any value of adding a public API to 
-    * the {@link AOPBasedSingletonContainer} to expose this {@link SingletonBeanContext}
-    */
-   private SingletonBeanContext legacySingletonBeanContext;
-
-   private Map<Class<?>, List<Injector<Object>>> interceptorInjectors = new HashMap<Class<?>, List<Injector<Object>>>();
 
    /**
     * Construct an {@link AOPBasedInterceptorRegistry} for a {@link AOPBasedSingletonContainer}
@@ -95,18 +83,22 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
          throw new IllegalArgumentException(AOPBasedInterceptorRegistry.class + " can only handle "
                + AOPBasedContainerInvocation.class + " , was passed " + containerInvocation.getClass());
       }
+      
+      if (!(targetBeanContext instanceof org.jboss.ejb3.BeanContext))
+      {
+         throw new IllegalArgumentException(AOPBasedInterceptorRegistry.class + " can only handle "
+               + org.jboss.ejb3.BeanContext.class + " , was passed " + targetBeanContext.getClass());
+      }
       AOPBasedContainerInvocation aopInvocationContext = (AOPBasedContainerInvocation) containerInvocation;
       // form a AOP invocation
       MethodInfo methodInfo = aopInvocationContext.getMethodInfo();
 
-      EJBContainerInvocation<AOPBasedSingletonContainer, SingletonBeanContext> invocation = new SessionContainerInvocation<AOPBasedSingletonContainer, SingletonBeanContext>(
+      EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext> invocation = new SessionContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext>(
             containerInvocation.getInvokedBusinessInterface(), aopInvocationContext.getMethodInfo());
       invocation.setAdvisor(methodInfo.getAdvisor());
       invocation.setArguments(containerInvocation.getArgs());
-      // we ignore the passed bean context and always used the singleton bean context that we have locally
-      // TODO: Rethink on this approach
       // set the target bean context of the AOP invocation
-      invocation.setBeanContext(this.legacySingletonBeanContext);
+      invocation.setBeanContext((org.jboss.ejb3.interceptors.container.BeanContext<?>) targetBeanContext);
 
       
          // fire the AOP invocation
@@ -148,39 +140,39 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    @Override
    public void invokePostConstruct(BeanContext targetBeanContext) throws Exception
    {
-      // fallback on legacy AOP based lifecycle impl
-      this.legacySingletonBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
-            targetBeanContext);
-      // TODO: This passes the bean context through a series of injectors
-      // which are responsible for carrying out the injection on the bean context (ex: field based
-      // injection like for @PersistenceContext).
-      // THIS HAS TO BE IN THE EJBLifecycleHandler SO THAT THE INJECTIONS
-      // CAN HAPPEN ON LIFECYCLE EVENTS (LIKE BEAN INSTANTIATION)
-      //this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
-
-      // Note: The method name initialiseInterceptorInstances() gives a 
-      // wrong impression. This method not just instantiates a interceptor instance,
-      // but it also injects (through the help of InjectionHanlder(s)) the interceptor
-      // instance for any injectable fields
-      // TODO: Ideally, this should be split up into separate instantiation and injection
-      // calls.
-      //legacySingletonBeanContext.initialiseInterceptorInstances();
-      for (Class<?> interceptorClass : this.getInterceptorClasses())
-      {
-         Object interceptorInstance = legacySingletonBeanContext.getInterceptor(interceptorClass);
-         List<Injector<Object>> injectors = this.interceptorInjectors.get(interceptorClass);
-         if (injectors == null)
-         {
-            continue;
-         }
-         for (Injector<Object> injector : injectors)
-         {
-            injector.inject(interceptorInstance);
-         }
-      }
-
-      // invoke post construct lifecycle on the bean/interceptor instances
-      this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
+//      // fallback on legacy AOP based lifecycle impl
+//      this.legacySingletonBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
+//            targetBeanContext);
+//      // TODO: This passes the bean context through a series of injectors
+//      // which are responsible for carrying out the injection on the bean context (ex: field based
+//      // injection like for @PersistenceContext).
+//      // THIS HAS TO BE IN THE EJBLifecycleHandler SO THAT THE INJECTIONS
+//      // CAN HAPPEN ON LIFECYCLE EVENTS (LIKE BEAN INSTANTIATION)
+//      //this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
+//
+//      // Note: The method name initialiseInterceptorInstances() gives a 
+//      // wrong impression. This method not just instantiates a interceptor instance,
+//      // but it also injects (through the help of InjectionHanlder(s)) the interceptor
+//      // instance for any injectable fields
+//      // TODO: Ideally, this should be split up into separate instantiation and injection
+//      // calls.
+//      //legacySingletonBeanContext.initialiseInterceptorInstances();
+////      for (Class<?> interceptorClass : this.getInterceptorClasses())
+////      {
+////         Object interceptorInstance = legacySingletonBeanContext.getInterceptor(interceptorClass);
+////         List<Injector<Object>> injectors = this.interceptorInjectors.get(interceptorClass);
+////         if (injectors == null)
+////         {
+////            continue;
+////         }
+////         for (Injector<Object> injector : injectors)
+////         {
+////            injector.inject(interceptorInstance);
+////         }
+////      }
+//
+//      // invoke post construct lifecycle on the bean/interceptor instances
+//      this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
 
    }
 
@@ -194,9 +186,9 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    public void invokePreDestroy(BeanContext targetBeanContext) throws Exception
    {
       // fallback on legacy AOP based lifecycle impl
-      org.jboss.ejb3.BeanContext<?> legacyBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
-            targetBeanContext);
-      this.aopBasedSingletonContainer.invokePreDestroy(legacyBeanContext);
+//      org.jboss.ejb3.BeanContext<?> legacyBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
+//            targetBeanContext);
+//      this.aopBasedSingletonContainer.invokePreDestroy(legacyBeanContext);
 
    }
 
@@ -219,25 +211,6 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    public List<Class<?>> getInterceptorClasses()
    {
       return this.aopBasedSingletonContainer.getBeanContainer().getInterceptorRegistry().getInterceptorClasses();
-   }
-
-   /**
-    * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
-    */
-   @Override
-   public Map<Class<?>, List<Injector<Object>>> getInterceptorInjectors()
-   {
-      return this.interceptorInjectors;
-   }
-
-   /**
-    * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
-    */
-   @Override
-   public void setInterceptorInjectors(Map<Class<?>, List<Injector<Object>>> interceptorInjectors)
-   {
-      this.interceptorInjectors = interceptorInjectors;
-
    }
 
 }

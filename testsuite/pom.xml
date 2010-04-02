@@ -231,7 +231,9 @@
                                 <jvmArg>-Dsun.rmi.dgc.server.gcInterval=3600000</jvmArg>
                                 <!-- Temporary, till AS boots without this property JBAS-6744 -->
                                 <jvmArg>-Dxb.builder.useUnorderedSequence=true</jvmArg>
+                                <!--  Uncomment to add debug JVM params
                                 <jvmArg>-Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n</jvmArg>
+                                -->
                             </jvmArgs>
                             <jboss.test.run>true</jboss.test.run>
                         </configuration>

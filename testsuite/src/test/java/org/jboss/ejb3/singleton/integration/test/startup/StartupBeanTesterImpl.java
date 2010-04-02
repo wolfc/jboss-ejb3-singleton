@@ -19,67 +19,58 @@
 * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 */
-package org.jboss.ejb3.singleton.integration.test.tx;
+package org.jboss.ejb3.singleton.integration.test.startup;
 
+import java.util.List;
+
+import javax.ejb.EJB;
 import javax.ejb.Remote;
 import javax.ejb.Singleton;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 import org.jboss.ejb3.annotation.RemoteBinding;
+import org.jboss.logging.Logger;
 
 /**
- * TxAwareSingletonBean
+ * StartupBeanTesterImpl
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
 @Singleton
-@Remote (UserManager.class)
-@RemoteBinding (jndiBinding = TxAwareSingletonBean.JNDI_NAME)
-public class TxAwareSingletonBean implements UserManager
+@Remote (StartupBeanTester.class)
+@RemoteBinding (jndiBinding = StartupBeanTesterImpl.JNDI_NAME)
+public class StartupBeanTesterImpl implements StartupBeanTester
 {
-
-   public static final String JNDI_NAME = "Tx-UserManagerBean";
+   public static final String JNDI_NAME = "StartupBeanTesterRemoteBean";
    
+   @EJB
+   private CallTracker callTracker;
    
-   private EntityManager em;
-   
-   
-
-   /* (non-Javadoc)
-    * @see org.jboss.ejb3.singleton.integration.test.tx.UserManager#createUser(java.lang.String)
-    */
-   @Override
-   public long createUser(String userName)
-   {
-      try
-      {
-         
-         User user = new User(userName);
-         this.em.persist(user);
-         return user.getId();
-      }
-      catch (Exception e)
-      {
-         throw new RuntimeException(e);
-      }
-      
-      
-   }
+   private static Logger logger = Logger.getLogger(StartupBeanTesterImpl.class);
 
    /**
-    * @see org.jboss.ejb3.singleton.integration.test.tx.UserManager#getUser(long)
+    * @see org.jboss.ejb3.singleton.integration.test.startup.StartupBeanTester#wasSingletonLoadedOnStartup()
     */
    @Override
-   public User getUser(long id)
+   public boolean wasSingletonLoadedOnStartup()
    {
-      return this.em.find(User.class, id);
+      List<String> whoCalled = this.callTracker.whoCalled();
+      if (whoCalled == null || whoCalled.isEmpty())
+      {
+         return false;
+      }
+      logger.info("Number of callers " + whoCalled.size());
+      if (whoCalled.size() > 1)
+      {
+         throw new IllegalStateException("Unexpected number of calls = " + whoCalled.size() + " to " + this.callTracker);
+      }
+      String caller = whoCalled.get(0);
+      logger.info("Caller was " + caller);
+      if (StartupBean.class.getName().equals(caller))
+      {
+         return true;
+      }
+      return false;
    }
    
-   @PersistenceContext
-   public void setEntityManager(EntityManager em)
-   {
-      this.em = em;
-   }
 }

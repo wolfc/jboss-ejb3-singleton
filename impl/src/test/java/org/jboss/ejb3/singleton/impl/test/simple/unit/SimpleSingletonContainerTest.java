@@ -28,16 +28,15 @@ import static org.junit.Assert.assertSame;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
-import org.jboss.ejb3.singleton.impl.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
+import org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl;
+import org.jboss.ejb3.singleton.impl.test.simple.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.impl.test.simple.SimpleSingletonBean;
-import org.jboss.injection.inject.spi.Injector;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 import org.jboss.metadata.ejb.spec.SessionType;
 import org.junit.Before;
@@ -72,6 +71,8 @@ public class SimpleSingletonContainerTest
       // create a singleton container
       this.singletonContainer = new SingletonContainer(SimpleSingletonBean.class, singletonBeanMetadata,
             new EmptyInterceptorRegistry());
+      this.singletonContainer.setBeanInstanceManager(new SingletonEJBInstanceManagerImpl(SimpleSingletonBean.class,
+            this.singletonContainer, this.singletonContainer));
    }
 
    /**
@@ -255,25 +256,7 @@ public class SimpleSingletonContainerTest
          return Collections.EMPTY_LIST;
       }
 
-      /* (non-Javadoc)
-       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#getInterceptorInjectors()
-       */
-      @Override
-      public Map<Class<?>, List<Injector<Object>>> getInterceptorInjectors()
-      {
-         // TODO Auto-generated method stub
-         return null;
-      }
-
-      /* (non-Javadoc)
-       * @see org.jboss.ejb3.container.spi.InterceptorRegistry#setInterceptorInjectors(java.util.List)
-       */
-      @Override
-      public void setInterceptorInjectors(Map<Class<?>, List<Injector<Object>>> interceptorInjectors)
-      {
-         // TODO Auto-generated method stub
-         
-      }
+      
 
    }
 }

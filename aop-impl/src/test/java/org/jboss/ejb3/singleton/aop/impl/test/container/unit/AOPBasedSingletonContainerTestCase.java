@@ -32,11 +32,11 @@ import org.jboss.aop.AspectManager;
 import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
+import org.jboss.ejb3.DefaultEjbEncFactory;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
-import org.jboss.ejb3.singleton.aop.impl.test.common.MockEJB3Deployment;
+import org.jboss.ejb3.singleton.aop.impl.test.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.aop.impl.test.container.SimpleSingletonBean;
-import org.jboss.ejb3.singleton.impl.container.InVMContainerInvocationImpl;
 import org.jboss.metadata.annotation.creator.ejb.jboss.JBoss50Creator;
 import org.jboss.metadata.annotation.finder.AnnotationFinder;
 import org.jboss.metadata.annotation.finder.DefaultAnnotationFinder;
@@ -108,13 +108,17 @@ public class AOPBasedSingletonContainerTestCase
       Assert.assertTrue(SimpleSingletonBean.class + " wasn't considered a singleton bean ", sessionBeanMetaData
             .isSingleton());
 
+
       ClassLoader cl = Thread.currentThread().getContextClassLoader();
       String beanClassName = SimpleSingletonBean.class.getName();
       String beanName = SimpleSingletonBean.class.getSimpleName();
+      String containerName = "jboss.j2ee:service=EJB3,name=" + beanName;
+      sessionBeanMetaData.setContainerName(containerName);
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
             this.singletonAOPDomain, props, sessionBeanMetaData);
-
+      singletonContainer.setEjbEncFactory(new DefaultEjbEncFactory());
+      
       Method getCountMethod = SimpleSingletonBean.class.getDeclaredMethod("getCount", new Class<?>[]
       {});
       Object[] args = new Object[]

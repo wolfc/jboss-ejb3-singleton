@@ -60,8 +60,14 @@
         
         <dependency>
             <groupId>org.jboss.ejb3.singleton</groupId>
-            <artifactId>jboss-ejb3-singleton-impl</artifactId>
+            <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3</groupId>
+            <artifactId>jboss-ejb3-proxy-impl</artifactId>
+            <version>1.0.6</version>
         </dependency>
 	
         

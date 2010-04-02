@@ -41,24 +41,24 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    /**
     * Bean implementation class
     */
-   private Class<?> beanClass;
+   protected Class<?> beanClass;
 
    /**
     * The EJB container
     */
-   private EJBContainer container;
+   protected EJBContainer container;
 
    /**
     * An {@link EJBLifecycleHandler} responsible for handling the
     * lifecyle of the bean instances created/destroyed by this
     * {@link EJBInstanceManager}
     */
-   private EJBLifecycleHandler beanInstanceLifecycleHandler;
+   protected EJBLifecycleHandler beanInstanceLifecycleHandler;
 
    /**
     * The singleton bean context
     */
-   private BeanContext singletonBeanContext;
+   protected BeanContext singletonBeanContext;
 
    /**
     * Constructs a {@link SingletonEJBInstanceManagerImpl} for the <code>beanClass</code> and
@@ -89,7 +89,7 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
             if (this.singletonBeanContext == null)
             {
                Object beanInstance = this.createBeanInstance();
-               this.singletonBeanContext = new SingletonBeanContext(beanInstance, this.container);
+               this.singletonBeanContext = this.createBeanContext(beanInstance);
                newInstanceCreated = true;
             }
          }
@@ -179,12 +179,17 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
       return false;
    }
 
+   protected BeanContext createBeanContext(Object beanInstance)
+   {
+      return new SingletonBeanContext(beanInstance, this.container);
+   }
+   
    /**
     * Creates an instance of the bean class
     * 
     * @return Returns the bean instance
     */
-   private Object createBeanInstance()
+   protected Object createBeanInstance()
    {
       try
       {

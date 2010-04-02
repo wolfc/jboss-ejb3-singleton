@@ -74,7 +74,19 @@
             <artifactId>proxy-reflect</artifactId>
             <version>${version.ejb3.reflect.proxy}</version>
         </dependency>
-
+        
+        <!-- Naming -->
+        <dependency>
+            <groupId>org.jboss.reloaded</groupId>
+            <artifactId>jboss-reloaded-naming</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.reloaded</groupId>
+            <artifactId>jboss-reloaded-naming-deployers</artifactId>
+            <version>0.1.0</version>
+        </dependency>
         
         <!-- JBoss deployers -->
         <dependency>

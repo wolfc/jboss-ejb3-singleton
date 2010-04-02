@@ -24,13 +24,10 @@ package org.jboss.ejb3.singleton.aop.impl;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 import javax.ejb.Handle;
 import javax.ejb.TimerService;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 import javax.naming.Context;
 
 import org.jboss.aop.Advisor;
@@ -42,24 +39,32 @@ import org.jboss.aop.joinpoint.MethodInvocation;
 import org.jboss.aop.util.MethodHashing;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
-import org.jboss.ejb3.Ejb3Module;
+import org.jboss.ejb3.Container;
+import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
+import org.jboss.ejb3.common.resolvers.spi.EjbReference;
+import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
+import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
+import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
+import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.session.SessionSpecContainer;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.AccessTimeoutMetaDataBridge;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaDataBridge;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
-import org.jboss.injection.inject.spi.Injector;
+import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
+import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
+import org.jboss.reloaded.naming.spi.JavaEEComponent;
 
 /**
  * <p>
@@ -74,7 +79,7 @@ import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler
 {
 
    /**
@@ -86,10 +91,23 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * This is the container to which the {@link AOPBasedSingletonContainer} will
     * delegate the calls to
     */
-   private SingletonContainer delegate;
+   protected SingletonContainer delegate;
 
-   private DeploymentUnit deploymentUnit;
+   protected DeploymentUnit deploymentUnit;
+   
+   protected PersistenceUnitDependencyResolver puResolver;
+   
+   protected EjbReferenceResolver ejbRefResolver;
+   
+   protected MessageDestinationReferenceResolver messageDestinationResolver;
 
+   
+   protected DependencyPolicy dependencyPolicy;
+   
+   protected JavaEEComponent javaComp;
+   
+   protected static final String LIFECYCLE_CALLBACK_STACK_NAME = "SingletonBeanLifecycleCallBackStack";
+   
    /**
     * Returns the AOP domain name which this container uses
     * for AOP based processing
@@ -123,10 +141,14 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData) throws ClassNotFoundException
    {
       super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData);
+      // HACK
+      this.dependencyPolicy = new JBoss5DependencyPolicy(this);
       // create a AOP based interceptor registry which will be used by the container
       InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
       // create the new jboss-ejb3-container-spi based singleton container
       this.delegate = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
+      SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this);
+      this.delegate.setBeanInstanceManager(instanceManager);
 
    }
 
@@ -181,6 +203,70 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       // do nothing (we don't have a pool)
    }
+   
+//   /**
+//    * @see org.jboss.ejb3.EJBContainer#invokeCallback(org.jboss.ejb3.BeanContext, java.lang.Class)
+//    */
+//   @Override
+//   protected void invokeCallback(BeanContext<?> beanContext, Class<? extends Annotation> callbackAnnotationClass)
+//   {
+//      // it's the BeanContainer's responsibility to invoke the callback
+//      // through the correct interceptors. So let's pass the call to the beanContainer
+//      this.getBeanContainer().invokeCallback(beanContext, callbackAnnotationClass,LIFECYCLE_CALLBACK_STACK_NAME);
+//   }
+//   /**
+//    * @see org.jboss.ejb3.EJBContainer#pushEnc()
+//    */
+//   @Override
+//   protected void pushEnc()
+//   {
+//      // noop (we now rely on the new JavaEEComponent based naming)
+//   }
+//   
+//   /**
+//    * @see org.jboss.ejb3.EJBContainer#popEnc()
+//    */
+//   @Override
+//   protected void popEnc()
+//   {
+//      // noop (we now rely on the new JavaEEComponent based naming)
+//
+//   }
+   
+   public void setJavaComp(JavaEEComponent javaeeComp)
+   {
+      this.javaComp = javaeeComp;
+   }
+   
+   /**
+    * @see org.jboss.ejb3.EJBContainer#getEnc()
+    */
+//   @Override
+//   public Context getEnc()
+//   {
+//      if (this.javaComp != null)
+//      {
+//         return this.javaComp.getContext();
+//      }
+//      ClassLoader cl = Thread.currentThread().getContextClassLoader();
+//      Class<?> interfaces[] = { Context.class };
+//      InvocationHandler handler = new InvocationHandler() {
+//         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
+//         {
+//            try
+//            {
+//               if(javaComp == null)
+//                  throw new IllegalStateException("java:comp is not allowed before CREATE of " + AOPBasedSingletonContainer.class.getName());
+//               return method.invoke(javaComp.getContext(), args);
+//            }
+//            catch(InvocationTargetException e)
+//            {
+//               throw e.getTargetException();
+//            }
+//         }
+//      };
+//      return (Context) Proxy.newProxyInstance(cl, interfaces, handler);
+//   }
 
    /**
     * @see org.jboss.ejb3.session.SessionSpecContainer#lockedStop()
@@ -295,7 +381,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
                + this.getEjbName() + " : " + method.toString()
                + ", probable error in virtual method registration w/ Advisor for the Container");
       }
-      SerializableMethod serializableMethod = new SerializableMethod(method, invokedBusinessInterface);
       // create a container invocation
       ContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo, args);
 
@@ -314,6 +399,17 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
 
    }
 
+   /**
+    * @see org.jboss.ejb3.session.SessionSpecContainer#invoke(java.lang.Object, org.jboss.ejb3.common.lang.SerializableMethod, java.lang.Object[])
+    */
+   @Override
+   public Object invoke(Object proxy, SerializableMethod serializableMethod, Object[] args) throws Throwable
+   {
+      Class<?> invokedBusinessInterface = this.classloader.loadClass(serializableMethod.getActualClassName());
+      Method invokedMethod = serializableMethod.toMethod(this.classloader);
+      return this.invoke((Serializable) null, invokedBusinessInterface, invokedMethod, args);
+   }
+   
    /**
     * This method returns null, because binding of proxies into JNDI is done
     * by a separate module, outside of the singleton container implementation
@@ -468,61 +564,16 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return this.classloader;
    }
 
+   
    /**
     * @see org.jboss.ejb3.EJBContainer#createObjectName(java.lang.String)
     */
    @Override
    public String createObjectName(String ejbName)
    {
-      StringBuilder sb = new StringBuilder(Ejb3Module.BASE_EJB3_JMX_NAME + ",");
-      DeploymentUnit ear = this.deploymentUnit == null ? null : this.deploymentUnit.getParent();
-      if (ear != null)
-      {
-         sb.append("ear=");
-         sb.append(ear.getSimpleName());
-         sb.append(",");
-      }
-      String unitName = this.deploymentUnit == null ? null : this.deploymentUnit.getSimpleName();
-      if (unitName == null)
-      {
-         sb.append("*");
-      }
-      else
-      {
-         sb.append("jar=");
-         sb.append(unitName);
-      }
-      sb.append(",name=");
-      sb.append(ejbName);
-      try
-      {
-         ObjectName on = new ObjectName(sb.toString());
-         return on.getCanonicalName();
-      }
-      catch (MalformedObjectNameException e)
-      {
-         throw new RuntimeException(e);
-      }
-
+      return this.xml.getContainerName();
    }
 
-   /**
-    * @see org.jboss.ejb3.container.spi.EJBContainer#setEJBInjectors(java.util.List)
-    */
-   @Override
-   public void setEJBInjectors(List<Injector<Object>> injectors)
-   {
-      this.delegate.setEJBInjectors(injectors);
-
-   }
-
-   /**
-    * @see org.jboss.ejb3.EJBContainer#getInjectors()
-    */
-   public List<Injector<Object>> getEJBInjectors()
-   {
-      return this.delegate.getEJBInjectors();
-   }
 
    /**
     * @see org.jboss.ejb3.container.spi.EJBContainer#getENC()
@@ -530,8 +581,158 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public Context getENC()
    {
-      return this.delegate.getENC();
+      return this.getEnc();
    }
    
+   public PersistenceUnitDependencyResolver getPersistenceUnitResolver()
+   {
+      return this.puResolver;
+   }
+   
+   public void setPersistenceUnitResolver(PersistenceUnitDependencyResolver puResolver)
+   {
+      this.puResolver = puResolver;
+   }
+   
+   public void setEjbReferenceResolver(EjbReferenceResolver ejbRefResolver)
+   {
+      this.ejbRefResolver = ejbRefResolver;
+   }
+   
+   public EjbReferenceResolver getEjbReferenceResolver()
+   {
+      return this.ejbRefResolver;
+   }
+   
+   public MessageDestinationReferenceResolver getMessageDestinationResolver()
+   {
+      return messageDestinationResolver;
+   }
 
+   public void setMessageDestinationResolver(MessageDestinationReferenceResolver messageDestinationResolver)
+   {
+      this.messageDestinationResolver = messageDestinationResolver;
+   }
+   
+   /**
+    * @see org.jboss.ejb3.EJBContainer#canResolveEJB()
+    */
+   @Override
+   public boolean canResolveEJB()
+   {
+      // TODO: Revisit this after we have a implementation for 
+      // nointerface ejbrefresolver
+      return false;
+      //return this.ejbRefResolver != null;
+   }
+   
+   @Override
+   public String resolveEJB(String link, Class<?> beanInterface, String mappedName)
+   {
+      if (this.ejbRefResolver == null)
+      {
+         return null;
+      }
+      EjbReference reference = new EjbReference(link, beanInterface.getName(), mappedName);
+      return this.ejbRefResolver.resolveEjb(this.deploymentUnit, reference);
+      
+   }
+   
+   @Override
+   public Container resolveEjbContainer(String link, Class businessIntf)
+   {
+      return null;
+   }
+
+   @Override
+   public Container resolveEjbContainer(Class businessIntf) 
+   {
+      return null;
+   }
+   
+   @Override
+   public String resolvePersistenceUnitSupplier(String unitName)
+   {
+      if (this.puResolver == null)
+      {
+         return null;
+      }
+      return this.puResolver.resolvePersistenceUnitSupplier(this.deploymentUnit, unitName);
+   }
+
+   /**
+    * @see org.jboss.ejb3.EJBContainer#resolveMessageDestination(java.lang.String)
+    */
+   @Override
+   public String resolveMessageDestination(String link)
+   {
+      if (this.messageDestinationResolver == null)
+      {
+         return null;
+      }
+      return this.messageDestinationResolver.resolveMessageDestinationJndiName(this.deploymentUnit, link);
+   }
+
+   /**
+    * @see org.jboss.ejb3.EJBContainer#getDependencyPolicy()
+    */
+   @Override
+   public DependencyPolicy getDependencyPolicy()
+   {
+      return this.dependencyPolicy;
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler#postConstruct(org.jboss.ejb3.container.spi.BeanContext)
+    */
+   @Override
+   public void postConstruct(org.jboss.ejb3.container.spi.BeanContext beanContext) throws Exception
+   {
+      if (!(beanContext instanceof org.jboss.ejb3.BeanContext))
+      {
+         throw new IllegalArgumentException(this.getClass() + " can only handle "
+               + org.jboss.ejb3.BeanContext.class + " , was passed " + beanContext.getClass());
+      }
+      try
+      {
+         this.pushEnc();
+         this.pushContext((BeanContext<?>) beanContext);
+  
+         this.injectBeanContext((BeanContext<?>) beanContext);
+         this.invokePostConstruct((BeanContext<?>) beanContext);
+         this.delegate.getInterceptorRegistry().invokePostConstruct(beanContext);
+
+      }
+      finally
+      {
+         this.popContext();
+         this.popEnc();
+      }
+   }
+
+   /**
+    * @see org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler#preDestroy(org.jboss.ejb3.container.spi.BeanContext)
+    */
+   @Override
+   public void preDestroy(org.jboss.ejb3.container.spi.BeanContext beanContext) throws Exception
+   { 
+      if (!(beanContext instanceof org.jboss.ejb3.BeanContext))
+      {
+         throw new IllegalArgumentException(this.getClass() + " can only handle "
+               + org.jboss.ejb3.BeanContext.class + " , was passed " + beanContext.getClass());
+      }
+      try
+      {
+         this.pushEnc();
+         this.pushContext((BeanContext<?>) beanContext);
+         this.invokePreDestroy((BeanContext<?>) beanContext);
+         this.delegate.getInterceptorRegistry().invokePreDestroy(beanContext);
+      }
+      finally
+      {
+         this.popContext();
+         this.popEnc();
+      }
+   }
+   
 }

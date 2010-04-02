@@ -4,7 +4,15 @@
 
     <interceptor factory="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory" scope="PER_INSTANCE"/>
     
+    <stack name="SingletonSessionClientInterceptors">
+      <interceptor-ref name="org.jboss.ejb3.remoting.IsLocalInterceptor"/>
+      <interceptor-ref name="org.jboss.ejb3.security.client.SecurityClientInterceptor"/>
+      <interceptor-ref name="org.jboss.aspects.tx.ClientTxPropagationInterceptor"/>
+      <interceptor-ref name="org.jboss.aspects.remoting.InvokeRemoteInterceptor"/>
+    </stack>
+    
    <domain name="Singleton Bean" extends="Intercepted Bean" inheritBindings="true">
+
       <bind pointcut="execution(public * *->*(..))">
          <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
          <interceptor-ref name="org.jboss.ejb3.security.AuthenticationInterceptorFactory"/>
@@ -25,6 +33,7 @@
          <!-- container concurrency management -->
          <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
       </bind>
+      
    </domain>
 
    

@@ -22,16 +22,13 @@
 package org.jboss.ejb3.singleton.aop.impl.context;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
-import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.context.spi.EJBContext;
 import org.jboss.ejb3.session.SessionSpecBeanContext;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
+import org.jboss.logging.Logger;
 
 /**
  * LegacySingletonBeanContext
@@ -39,19 +36,19 @@ import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class SingletonBeanContext extends SessionSpecBeanContext<AOPBasedSingletonContainer>
+public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedSingletonContainer>
       implements
          BeanContext
 {
+   private static Logger logger = Logger.getLogger(LegacySingletonBeanContext.class);
+   
    private AOPBasedSingletonContainer aopBasedSingletonContainer;
 
-   private Map<Class<?>, Object> interceptorInstances = new HashMap<Class<?>, Object>();
 
-   public SingletonBeanContext(AOPBasedSingletonContainer aopBasedSingletonContainer, BeanContext context)
+   public LegacySingletonBeanContext(AOPBasedSingletonContainer aopBasedSingletonContainer, Object beanInstance)
    {
-      super(aopBasedSingletonContainer, context.getBeanInstance());
+      super(aopBasedSingletonContainer, beanInstance);
       this.aopBasedSingletonContainer = aopBasedSingletonContainer;
-      this.initInterceptorInstances();
    }
 
    /**
@@ -67,42 +64,15 @@ public class SingletonBeanContext extends SessionSpecBeanContext<AOPBasedSinglet
       return this.ejbContext;
    }
 
-   /* (non-Javadoc)
+   /**
     * @see org.jboss.ejb3.BeanContext#remove()
     */
    @Override
    public void remove()
    {
-      throw new RuntimeException("Not yet implemented");
-
+      logger.warn(this.getClass().getName() + ".remove() not yet implemented");
    }
-
-   private void initInterceptorInstances()
-   {
-      InterceptorRegistry interceptorRegistry = this.getEJBContainer().getInterceptorRegistry();
-      List<Class<?>> interceptorClasses = interceptorRegistry.getInterceptorClasses();
-      for (Class<?> interceptorClass : interceptorClasses)
-      {
-         try
-         {
-            Object interceptorInstance = interceptorClass.newInstance();
-            this.interceptorInstances.put(interceptorClass, interceptorInstance);
-         }
-         catch (InstantiationException ie)
-         {
-            throw new RuntimeException("Could not create interceptor instance for interceptor class "
-                  + interceptorClass, ie);
-         }
-         catch (IllegalAccessException iae)
-         {
-            throw new RuntimeException("Could not create interceptor instance for interceptor class "
-                  + interceptorClass, iae);
-         }
-
-      }
-
-   }
-
+  
    /**
     * @see org.jboss.ejb3.container.spi.BeanContext#getBeanInstance()
     */
@@ -131,16 +101,4 @@ public class SingletonBeanContext extends SessionSpecBeanContext<AOPBasedSinglet
       return null;
    }
    
-   /**
-    * @see org.jboss.ejb3.BaseContext#getInterceptor(java.lang.Class)
-    */
-   @Override
-   public Object getInterceptor(Class<?> interceptorClass) throws IllegalArgumentException
-   {
-      Object interceptor = this.interceptorInstances.get(interceptorClass);
-      if(interceptor == null)
-         throw new IllegalArgumentException("No interceptor found for " + interceptorClass + " in " + this);
-      return interceptor;
-      
-   }
 }
