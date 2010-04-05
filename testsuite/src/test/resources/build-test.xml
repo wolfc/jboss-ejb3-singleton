@@ -5,7 +5,10 @@
 	<!-- Enforce JBOSS_HOME -->
 	<fail unless="env.JBOSS_HOME" message="JBOSS_HOME not set"/>
 	<property name="JBOSS_HOME" value="${env.JBOSS_HOME}"/>
-
+	<condition property="skip.packagemanager">
+		<isset property="env.skip.packagemanager"/>
+	</condition>
+	
 	<property name="location.target" value="${basedir}/target"/>
   	<property name="location.dependencies" value="${location.target}/dependencies"/>
   	<property name="location.packagemanager" value="${location.dependencies}/package-manager"/>

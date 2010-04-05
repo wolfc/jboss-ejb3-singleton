@@ -42,7 +42,6 @@ import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.EJBContainer;
-import org.jboss.ejb3.container.spi.deployment.EJB3Deployment;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
@@ -126,7 +125,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
 
       // ordering
       // new SPI based EJB3Deployment
-      addInput(EJB3Deployment.class);
+      //addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
    }
 
@@ -212,9 +211,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.instantiated();
 
       singletonContainer.processMetadata();
-
-      // Register the newly created container with the new SPI based EJB3Deployment
-      this.registerWithEJB3Deployment(unit, singletonContainer);
       
       this.installContainer(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
       
@@ -241,20 +237,20 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       return JBossEnterpriseBeanMetaData.class;
    }
    
-   /**
-    * 
-    * @param unit Deployment unit
-    * @param container EJB container
-    */
-   private void registerWithEJB3Deployment(DeploymentUnit unit, EJBContainer container)
-   {
-      EJB3Deployment ejb3Deployment = unit.getAttachment(EJB3Deployment.class);
-      if (ejb3Deployment != null)
-      {
-         ejb3Deployment.addContainer(container);
-      }
-      return;
-   }
+//   /**
+//    * 
+//    * @param unit Deployment unit
+//    * @param container EJB container
+//    */
+//   private void registerWithEJB3Deployment(DeploymentUnit unit, EJBContainer container)
+//   {
+//      EJB3Deployment ejb3Deployment = unit.getAttachment(EJB3Deployment.class);
+//      if (ejb3Deployment != null)
+//      {
+//         ejb3Deployment.addContainer(container);
+//      }
+//      return;
+//   }
    
    /**
     * Creates a  MC bean for the <code>container</code> and adds it as a {@link BeanMetaData} to the unit

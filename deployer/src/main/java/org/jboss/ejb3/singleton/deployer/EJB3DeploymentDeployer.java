@@ -85,7 +85,7 @@ public class EJB3DeploymentDeployer extends AbstractDeployer
       // get metadata
       JBossMetaData metadata = unit.getAttachment(AttachmentNames.PROCESSED_METADATA, JBossMetaData.class);
       // we only process EJB3.x
-      if (!metadata.isEJB3x())
+      if (metadata == null || !metadata.isEJB3x())
       {
          return;
       }
