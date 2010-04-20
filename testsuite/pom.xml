@@ -188,6 +188,7 @@
                 phase -->
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.2</version>
                 <executions>
                     <execution>
                         <id>install-singleton-packages</id>
@@ -196,8 +197,8 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <tasks> 
-                                <ant antfile="${project.build.directory}/test-classes/build-test.xml" target="install-singleton-packages" /> 
+                            <tasks unless="skip.packagemanager">
+                                <ant antfile="${project.build.directory}/test-classes/build-test.xml" target="install-singleton-packages"/>
                             </tasks>
                         </configuration>
                     </execution> 
@@ -229,6 +230,9 @@
                                 <jvmArg>-Dorg.jboss.resolver.warning=true</jvmArg>
                                 <jvmArg>-Dsun.rmi.dgc.client.gcInterval=3600000</jvmArg>
                                 <jvmArg>-Dsun.rmi.dgc.server.gcInterval=3600000</jvmArg>
+                                <!-- Prefer IPv4 stack as as temporary workaround to avoid 'all' config startup issues 
+                                from IPv4 multicast addresses. See JBAS-7936 -->
+                                <jvmArg>-Djava.net.preferIPv4Stack=true</jvmArg>
                                 <!-- Temporary, till AS boots without this property JBAS-6744 -->
                                 <jvmArg>-Dxb.builder.useUnorderedSequence=true</jvmArg>
                                 <!--  Uncomment to add debug JVM params
