@@ -257,6 +257,19 @@
                     </execution>
 
                 </executions>
+                <dependencies>
+                    <!-- We need jbossall-client.jar in the classpath of this maven-jboss-as-control-plugin
+                    because, during stop-jboss-as goal, this plugin looks up the jmx/RMIAdaptor which requires
+                    a JBoss specific class to be in classpath.
+                    Related to https://jira.jboss.org/jira/browse/JBAS-7818 -->
+                    <dependency>
+                        <groupId>org.jboss.jbossas</groupId>
+                        <artifactId>jboss-as-client</artifactId>
+                        <version>dummy</version>
+                        <scope>system</scope>
+                        <systemPath>${JBOSS_HOME}/client/jbossall-client.jar</systemPath>
+                    </dependency>
+                </dependencies>
             </plugin>
 
         </plugins>
