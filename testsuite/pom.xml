@@ -100,19 +100,6 @@
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <printSummary>true</printSummary>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>integration-tests</id>
-                        <phase>integration-test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <configuration>
-                            <!-- Override the earlier set value to now run integration tests -->
-                            <skipTests>false</skipTests>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <!--
@@ -172,6 +159,43 @@
                                     <type>jar</type>
                                     <outputDirectory>${project.build.directory}/dependencies/packages</outputDirectory>
                                 </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>junit</groupId>
+                                    <artifactId>junit</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>ant-contrib</groupId>
+                                    <artifactId>ant-contrib</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+
+                                <artifactItem>
+                                    <groupId>org.apache.ant</groupId>
+                                    <artifactId>ant-junit</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+                                
+                                <artifactItem>
+                                    <groupId>org.jboss.shrinkwrap</groupId>
+                                    <artifactId>shrinkwrap-impl-base</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+
+                                <artifactItem>
+                                    <groupId>org.jboss.shrinkwrap</groupId>
+                                    <artifactId>shrinkwrap-api</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+
+                                <artifactItem>
+                                    <groupId>org.jboss.shrinkwrap</groupId>
+                                    <artifactId>shrinkwrap-spi</artifactId>
+                                    <outputDirectory>${project.build.directory}/dependencies/lib</outputDirectory>
+                                </artifactItem>
+                                
 
                             </artifactItems>
                             <overWriteIfNewer>true</overWriteIfNewer>
@@ -188,7 +212,7 @@
                 phase -->
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.2</version>
+                <version>1.3</version>
                 <executions>
                     <execution>
                         <id>install-singleton-packages</id>
@@ -198,11 +222,32 @@
                         </goals>
                         <configuration>
                             <tasks unless="skip.packagemanager">
-                                <ant antfile="${project.build.directory}/test-classes/build-test.xml" target="install-singleton-packages"/>
+                                <ant antfile="${project.build.directory}/test-classes/build-test.xml" target="install-singleton-packages" inheritRefs="true" inheritAll="true"/>
                             </tasks>
                         </configuration>
                     </execution> 
+                    
+                    <execution>
+                        <id>run-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <ant antfile="${project.build.directory}/test-classes/test.xml" target="tests" inheritRefs="true" inheritAll="true"/>
+                            </tasks>
+                        </configuration>
+                        
+                    </execution>
                 </executions> 
+                <dependencies>
+                    <dependency>
+                     <groupId>org.apache.ant</groupId>
+                     <artifactId>ant</artifactId>
+                     <version>1.7.1</version>
+                  </dependency>
+                </dependencies>                
             </plugin>
             
             <!--
@@ -257,19 +302,7 @@
                     </execution>
 
                 </executions>
-                <dependencies>
-                    <!-- We need jbossall-client.jar in the classpath of this maven-jboss-as-control-plugin
-                    because, during stop-jboss-as goal, this plugin looks up the jmx/RMIAdaptor which requires
-                    a JBoss specific class to be in classpath.
-                    Related to https://jira.jboss.org/jira/browse/JBAS-7818 -->
-                    <dependency>
-                        <groupId>org.jboss.jbossas</groupId>
-                        <artifactId>jboss-as-client</artifactId>
-                        <version>dummy</version>
-                        <scope>system</scope>
-                        <systemPath>${JBOSS_HOME}/client/jbossall-client.jar</systemPath>
-                    </dependency>
-                </dependencies>
+                
             </plugin>
 
         </plugins>
@@ -285,6 +318,34 @@
         </dependency>
 
         <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>1.0b3</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-junit</artifactId>
+            <version>1.7.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-api</artifactId>
+            <version>1.0.0-alpha-2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-spi</artifactId>
+            <version>1.0.0-alpha-2</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
             <groupId>org.jboss.shrinkwrap</groupId>
             <artifactId>shrinkwrap-impl-base</artifactId>
             <version>1.0.0-alpha-2</version>
@@ -299,11 +360,10 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jboss.jbossas</groupId>
-            <artifactId>jboss-as-client</artifactId>
-            <version>dummy</version>
-            <scope>system</scope>
-            <systemPath>${JBOSS_HOME}/client/jbossall-client.jar</systemPath>
+            <groupId>org.jboss.spec.javax.ejb</groupId>
+            <artifactId>jboss-ejb-api_3.1_spec</artifactId>
+            <version>1.0.0.Beta2</version>
+            <scope>test</scope>
         </dependency>
 
 
