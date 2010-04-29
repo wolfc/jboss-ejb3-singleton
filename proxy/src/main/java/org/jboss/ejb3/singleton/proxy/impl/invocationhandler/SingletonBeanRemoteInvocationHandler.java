@@ -39,15 +39,6 @@ public class SingletonBeanRemoteInvocationHandler extends SessionRemoteProxyInvo
     */
    private static final long serialVersionUID = 1L;
 
-   /**
-    * (Remoting) Invoker locator URL
-    */
-   private String url;
-
-   /**
-    * Client side interceptors
-    */
-   private Interceptor[] clientInterceptors;
 
    /**
     * Constructs a {@link SingletonBeanRemoteInvocationHandler}
