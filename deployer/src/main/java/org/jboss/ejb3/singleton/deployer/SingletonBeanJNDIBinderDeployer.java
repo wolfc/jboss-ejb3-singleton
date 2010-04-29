@@ -42,6 +42,7 @@ import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.EJBContainer;
+import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.proxy.impl.remoting.ProxyRemotingUtils;
 import org.jboss.ejb3.proxy.reflect.ReflectProxyFactory;
 import org.jboss.ejb3.proxy.spi.factory.ProxyFactory;
@@ -177,6 +178,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             sessionBean, jndibindingPolicy);
 
       String containerRegistryKey = container.getObjectName().getCanonicalName();
+      String containerGUID = Ejb3Registry.guid(container);
       Context jndiCtx = null;
       try
       {
@@ -198,7 +200,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             Class<?> businessRemoteIntf = unit.getClassLoader().loadClass(businessRemote);
             allRemoteinterfaces.add(businessRemoteIntf);
 
-            InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey,
+            InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey, containerGUID,
                   defaultInvokerLocatorURL, clientInterceptors, businessRemote);
 
             // time to create a proxy
@@ -229,7 +231,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       if (remoteBindings == null || remoteBindings.isEmpty())
       {
 
-         InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey,
+         InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey, containerGUID,
                defaultInvokerLocatorURL, clientInterceptors);
          String defaultRemoteJNDIName = jndiNameResolver.resolveRemoteBusinessDefaultJNDIName(sessionBean);
          Object proxy = proxyFactory.createProxy(allRemoteinterfaces.toArray(new Class<?>[allRemoteinterfaces.size()]),
@@ -253,7 +255,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
                jndiName = jndiNameResolver.resolveRemoteBusinessDefaultJNDIName(sessionBean);
             }
             String invokerLocatorURL = getClientBindURL(remoteBinding);
-            InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey,
+            InvocationHandler invocationHandler = new SingletonBeanRemoteInvocationHandler(containerRegistryKey, containerGUID,
                   invokerLocatorURL, clientInterceptors);
             Object proxy = proxyFactory.createProxy(allRemoteinterfaces
                   .toArray(new Class<?>[allRemoteinterfaces.size()]), invocationHandler);
@@ -292,6 +294,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
 
       // TODO: Rethink
       String containerRegistryKey = container.getObjectName().getCanonicalName();
+      String containerGUID = Ejb3Registry.guid(container);
 
       ProxyFactory proxyFactory = new ReflectProxyFactory();
 
@@ -341,7 +344,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       List<LocalBindingMetaData> localBindings = sessionBean.getLocalBindings();
       if (localBindings == null || localBindings.isEmpty())
       {
-         InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey);
+         InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID);
          String defaultBusinessLocalJNDIName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
          Object proxy = proxyFactory.createProxy(allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]),
                invocationHandler);
@@ -362,7 +365,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             {
                jndiName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
             }
-            InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey);
+            InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID);
             Object proxy = proxyFactory.createProxy(
                   allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]), invocationHandler);
             JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);

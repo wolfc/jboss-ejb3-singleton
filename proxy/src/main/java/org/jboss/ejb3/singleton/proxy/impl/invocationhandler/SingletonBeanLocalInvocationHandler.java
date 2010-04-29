@@ -43,9 +43,9 @@ public class SingletonBeanLocalInvocationHandler extends SessionLocalProxyInvoca
     * 
     * @param containerRegistryName The name by which the container is registered
     */
-   public SingletonBeanLocalInvocationHandler(String containerRegistryName)
+   public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID)
    {
-      super(containerRegistryName, containerRegistryName, null);
+      super(containerRegistryName, containerGUID, null);
    }
 
    /**
@@ -55,9 +55,9 @@ public class SingletonBeanLocalInvocationHandler extends SessionLocalProxyInvoca
     * @param containerRegistryName The name by which the container is registered
     * @param businessInterface The business interface on which the invocation is being made
     */
-   public SingletonBeanLocalInvocationHandler(String containerRegistryName, String businessInterfaceType)
+   public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID, String businessInterfaceType)
    {
-      super(containerRegistryName, containerRegistryName, null, businessInterfaceType);
+      super(containerRegistryName, containerGUID, null, businessInterfaceType);
    }
 
    

@@ -56,10 +56,10 @@ public class SingletonBeanRemoteInvocationHandler extends SessionRemoteProxyInvo
     * @param locatorURL The Remoting invoker locator URL to be used to interact with the remote container
     * @param interceptors The client side interceptors to be used when an invocation is being handled
     */
-   public SingletonBeanRemoteInvocationHandler(String containerRegistryName, String locatorURL,
+   public SingletonBeanRemoteInvocationHandler(String containerRegistryName, String containerGUID, String locatorURL,
          Interceptor[] interceptors)
    {
-      super(containerRegistryName, containerRegistryName, interceptors, null, locatorURL);
+      super(containerRegistryName, containerGUID, interceptors, null, locatorURL);
    }
 
    /**
@@ -70,10 +70,10 @@ public class SingletonBeanRemoteInvocationHandler extends SessionRemoteProxyInvo
     * @param interceptors The client side interceptors to be used when an invocation is being handled
     * @param businessInterface The business interface corresponding to the proxy on which the invocation is being made
     */
-   public SingletonBeanRemoteInvocationHandler(String containerRegistryName, String locatorURL,
+   public SingletonBeanRemoteInvocationHandler(String containerRegistryName, String containerGUID, String locatorURL,
          Interceptor[] interceptors, String businessInterfaceType)
    {
-      super(containerRegistryName, containerRegistryName, interceptors, businessInterfaceType, locatorURL);
+      super(containerRegistryName, containerGUID, interceptors, businessInterfaceType, locatorURL);
    }
 
    

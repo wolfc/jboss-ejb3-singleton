@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 
-<project default="main" name="JBoss EJB3 Singleton tests"
+<project default="tests" name="JBoss EJB3 Singleton tests"
    xmlns:server="http://jboss.org/ns/test/ant/server">
   
   <!-- Define test Classpath -->

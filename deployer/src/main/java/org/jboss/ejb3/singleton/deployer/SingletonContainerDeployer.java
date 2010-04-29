@@ -21,7 +21,9 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Set;
 
 import org.jboss.aop.AspectManager;
@@ -38,12 +40,15 @@ import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
+import org.jboss.ejb3.Container;
+import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
+import org.jboss.ejb3.singleton.impl.resolver.EjbLinkResolver;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
@@ -101,6 +106,17 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    private JavaEEComponentInformer javaeeComponentInformer;
    
    /**
+    * Stores the reference of singleton containers which have been deployed, by this deployer.
+    * <p>
+    *   This information will be used during undeployment of the deployment unit
+    * </p>
+    * <p>
+    *   The key of this {@link Map} is the name of the container and the value is the container itself.
+    * </p>
+    */
+   protected Map<String, Container> singletonContainers = new HashMap<String, Container>();
+   
+   /**
     * Constructs a {@link SingletonContainerDeployer} for
     * processing singleton beans
     */
@@ -142,46 +158,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    @Override
    public void deploy(DeploymentUnit unit, JBossEnterpriseBeanMetaData beanMetaData) throws DeploymentException
    {
-      // we are only interested in EJB3.1
-      if (!beanMetaData.getJBossMetaData().isEJB31())
+      if (!isSingletonBean(beanMetaData))
       {
-         if (logger.isTraceEnabled())
-         {
-            logger.trace("Ignoring non-EJB3.1 bean " + beanMetaData.getName());
-         }
-         return;
-      }
-      // we are not interested in non-session beans 
-      if (!beanMetaData.isSession())
-      {
-         if (logger.isTraceEnabled())
-         {
-            logger.trace("Ignoring non-session bean " + beanMetaData.getName());
-         }
-         return;
-      }
-      // one last check to make sure we have got the right type!
-      if (!(beanMetaData instanceof JBossSessionBean31MetaData))
-      {
-         if (logger.isTraceEnabled())
-         {
-            logger.trace("Ignoring bean " + beanMetaData.getName() + " because its metadata is not of type "
-                  + JBossSessionBean31MetaData.class);
-         }
          return;
       }
 
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
-      // we are only concerned with Singleton beans
-      if (!sessionBean.isSingleton())
-      {
-         if (logger.isTraceEnabled())
-         {
-            logger.trace("Ignoring non-singleton bean " + sessionBean.getName());
-         }
-         return;
-      }
 
       // Create a singleton container
       ClassLoader classLoader = unit.getClassLoader();
@@ -211,7 +194,11 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.instantiated();
 
       singletonContainer.processMetadata();
+      // register the container with Ejb3Registry and also store reference locally (for use during
+      // undeploy)
+      this.registerContainer(sessionBean.getContainerName(), singletonContainer);
       
+      // attach the container to the deployment unit, with appropriate MC dependencies
       this.installContainer(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
       
    }
@@ -222,10 +209,12 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    @Override
    public void undeploy(DeploymentUnit unit, JBossEnterpriseBeanMetaData enterpriseBean)
    {
-
-      //super.undeploy(unit);
-      // TODO: need to do proper implementation here - to unregister the container from the EJB3Deployment 
-      // and other stuff
+      if (isSingletonBean(enterpriseBean))
+      {
+         String containerName = enterpriseBean.getContainerName();
+         this.unregisterContainer(containerName);
+         
+      }
    }
 
    /** 
@@ -237,20 +226,90 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       return JBossEnterpriseBeanMetaData.class;
    }
    
-//   /**
-//    * 
-//    * @param unit Deployment unit
-//    * @param container EJB container
-//    */
-//   private void registerWithEJB3Deployment(DeploymentUnit unit, EJBContainer container)
-//   {
-//      EJB3Deployment ejb3Deployment = unit.getAttachment(EJB3Deployment.class);
-//      if (ejb3Deployment != null)
-//      {
-//         ejb3Deployment.addContainer(container);
-//      }
-//      return;
-//   }
+   /**
+    * Returns true if the passed <code>beanMetaData</code> corresponds to a Singleton bean.
+    * Else returns false.
+    * 
+    * @param beanMetaData The bean metadata
+    * @return
+    */
+   private boolean isSingletonBean(JBossEnterpriseBeanMetaData beanMetaData)
+   {
+   // we are only interested in EJB3.1
+      if (!beanMetaData.getJBossMetaData().isEJB31())
+      {
+         if (logger.isTraceEnabled())
+         {
+            logger.trace("Not a EJB3.1 bean " + beanMetaData.getName());
+         }
+         return false;
+      }
+      // we are not interested in non-session beans 
+      if (!beanMetaData.isSession())
+      {
+         if (logger.isTraceEnabled())
+         {
+            logger.trace("Not a session bean " + beanMetaData.getName());
+         }
+         return false;
+      }
+      // one last check to make sure we have got the right type!
+      if (!(beanMetaData instanceof JBossSessionBean31MetaData))
+      {
+         if (logger.isTraceEnabled())
+         {
+            logger.trace("Session bean " + beanMetaData.getName() + " is not of type " + JBossSessionBean31MetaData.class);
+         }
+         return false;
+      }
+
+      // now start with actual processing
+      JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
+      // we are only concerned with Singleton beans
+      if (!sessionBean.isSingleton())
+      {
+         if (logger.isTraceEnabled())
+         {
+            logger.trace("Not a singleton bean " + sessionBean.getName());
+         }
+         return false;
+      }
+      // it's a singleton bean
+      return true;
+   }
+   
+   /**
+    * Register the container with the {@link Ejb3Registry} and also store a reference to the container
+    * locally in {@link #singletonContainers}
+    * 
+    * @param containerName The container name which will be used to store the container in {@link #singletonContainers}.
+    *                       Should *not* be null
+    * @param container The container being registered. Should *not* be null
+    */
+   private void registerContainer(String containerName, Container container)
+   {
+      // org.jboss.ejb3.remoting.IsLocalInterceptor requires the container to be registered with Ejb3Registry
+      Ejb3Registry.register(container);
+      // we need to cleanup in undeploy(), so keep an reference of containers which we registered
+      this.singletonContainers.put(containerName, container);
+   }
+   
+   /**
+    * Unregisters the container with name <code>containerName</code>, from the
+    * {@link Ejb3Registry} as well as removes the reference from {@link #singletonContainers}
+    * 
+    * @param containerName The name of the container
+    */
+   private void unregisterContainer(String containerName)
+   {
+      // remove (any) locally stored reference to container
+      Container container = this.singletonContainers.remove(containerName);
+      // unregister from Ejb3Registry
+      if (container != null)
+      {
+         Ejb3Registry.unregister(container);
+      }
+   }
    
    /**
     * Creates a  MC bean for the <code>container</code> and adds it as a {@link BeanMetaData} to the unit
@@ -266,28 +325,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container.getClass().getName());
       containerBMDBuilder.setConstructorValue(container);
       
-      // TODO: Alternate way (instead of relying on DependencyPolicy of EJBContainer
-      //      JBossSessionBean31MetaData sessionbean = (JBossSessionBean31MetaData) container.getMetaData();
-//      String localhome = sessionbean.getLocalHome();
-//      containerBMDBuilder.addSupply("Class:"+localhome);
-//      String remoteHome = sessionbean.getHome();
-//      containerBMDBuilder.addSupply("Class:"+remoteHome);
-//      BusinessLocalsMetaData businessLocals = sessionbean.getBusinessLocals();
-//      if (businessLocals != null)
-//      {
-//         for (String businessLocal : businessLocals)
-//         {
-//            containerBMDBuilder.addSupply("Class:"+businessLocal);
-//         }
-//      }
-//      BusinessRemotesMetaData businessRemotes = sessionbean.getBusinessRemotes();
-//      if (businessRemotes != null)
-//      {
-//         for (String businessRemote : businessRemotes)
-//         {
-//            containerBMDBuilder.addSupply("Class:"+businessRemote);
-//         }
-//      }
+      logger.debug("Installing container for EJB " + container.getEJBName());
       if (container.getDependencyPolicy() instanceof MCDependencyPolicy)
       {
          MCDependencyPolicy policy = (MCDependencyPolicy) container.getDependencyPolicy();
@@ -295,8 +333,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<DependencyMetaData> dependencies = policy.getDependencies();
          if (dependencies != null && dependencies.isEmpty() == false)
          {
+            logger.debug("with dependencies: ");
             for (DependencyMetaData dependency : dependencies)
             {
+               logger.debug(dependency.getDependency());
                containerBMDBuilder.addDependency(dependency.getDependency());
             }
          }
@@ -304,8 +344,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<DemandMetaData> demands = policy.getDemands();
          if (demands != null && demands.isEmpty() == false)
          {
+            logger.debug("with demands: ");
             for (DemandMetaData demand : demands)
             {
+               logger.debug(demand.getDemand());
                containerBMDBuilder.addDemand(demand.getDemand());
             }
          }
@@ -313,10 +355,32 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<SupplyMetaData> supplies = policy.getSupplies();
          if (supplies != null && supplies.isEmpty() == false)
          {
+            logger.debug("with supplies: ");
             for (SupplyMetaData supply : supplies)
             {
+               logger.debug(supply.getSupply());
                containerBMDBuilder.addSupply(supply.getSupply());
             }
+         }
+      }
+      // Add any dependencies based on @DependsOn/depends-on elements
+      JBossSessionBean31MetaData sessionBeanMetaData = (JBossSessionBean31MetaData) container.getMetaData();
+      String[] dependsOn = sessionBeanMetaData.getDependsOn();
+      if (dependsOn != null)
+      {
+         logger.debug("depends-on: ");
+         EjbLinkResolver ejbLinkResolver = new EjbLinkResolver();
+         for (String dependency : dependsOn)
+         {
+            String dependencyContainerName = ejbLinkResolver.resolveEjbContainerName(dependency, unit);
+            if (dependencyContainerName == null)
+            {
+               throw new RuntimeException(
+                     "Could not resolve container name for @DependsOn/depends-on with ejb-name: "
+                           + dependency + " while processing EJB named " + container.getEJBName());
+            }
+            logger.debug(dependencyContainerName);
+            containerBMDBuilder.addDependency(dependencyContainerName);
          }
       }
       // Add inject metadata on container
