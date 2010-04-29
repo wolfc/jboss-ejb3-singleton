@@ -69,6 +69,12 @@
 		<groupId>org.jboss.ejb3</groupId>
 		<artifactId>jboss-ejb3-core</artifactId>
 		<version>${version.ejb3.core}</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.jboss.metadata</groupId>
+                <artifactId>jboss-metadata</artifactId>
+            </exclusion>
+        </exclusions>
 	</dependency>
     
     <!-- Naming -->
