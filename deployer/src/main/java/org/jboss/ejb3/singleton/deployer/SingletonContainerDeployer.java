@@ -21,8 +21,10 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,11 +43,13 @@ import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.Container;
+import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.impl.resolver.EjbLinkResolver;
@@ -53,6 +57,12 @@ import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
+import org.jboss.metadata.ejb.jboss.jndi.resolver.impl.JNDIPolicyBasedJNDINameResolverFactory;
+import org.jboss.metadata.ejb.jboss.jndi.resolver.spi.SessionBean31JNDINameResolver;
+import org.jboss.metadata.ejb.jboss.jndipolicy.plugins.DefaultJNDIBindingPolicyFactory;
+import org.jboss.metadata.ejb.jboss.jndipolicy.spi.DefaultJndiBindingPolicy;
+import org.jboss.metadata.ejb.spec.BusinessLocalsMetaData;
+import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
 import org.jboss.reloaded.naming.deployers.javaee.JavaEEComponentInformer;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 
@@ -74,26 +84,28 @@ import org.jboss.reloaded.naming.spi.JavaEEComponent;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JBossEnterpriseBeanMetaData> implements DeploymentVisitor<JBossEnterpriseBeanMetaData>
+public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JBossEnterpriseBeanMetaData>
+      implements
+         DeploymentVisitor<JBossEnterpriseBeanMetaData>
 {
 
    /**
     * Logger
     */
    private static Logger logger = Logger.getLogger(SingletonContainerDeployer.class);
-   
+
    /**
     * Message destination resolver to be set in the container, which this
     * deployer creates
     */
    private MessageDestinationReferenceResolver messageDestinationResolver;
-   
+
    /**
     * Ejb reference resolver to be set in the container, which this
     * deployer creates
     */
    private EjbReferenceResolver ejbReferenceResolver;
-   
+
    /**
     * Persistence unit resolver to be set in the container, which this
     * deployer creates
@@ -104,7 +116,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * component informer
     */
    private JavaEEComponentInformer javaeeComponentInformer;
-   
+
    /**
     * Stores the reference of singleton containers which have been deployed, by this deployer.
     * <p>
@@ -115,7 +127,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * </p>
     */
    protected Map<String, Container> singletonContainers = new HashMap<String, Container>();
-   
+
    /**
     * Constructs a {@link SingletonContainerDeployer} for
     * processing singleton beans
@@ -124,16 +136,16 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    {
       //setInput(JBossMetaData.class);
       //this.javaeeComponentInformer = javaCompInformer;
-//      Set<String> inputs = new HashSet<String>();
-//      inputs.add(JBossEnterpriseBeanMetaData.class.getName());
-//      List<String> javaCompRequiredAttachments = Arrays.asList(this.javaeeComponentInformer.getRequiredAttachments());
-//      inputs.addAll(javaCompRequiredAttachments);
-//      
-//      this.setInputs(inputs);
+      //      Set<String> inputs = new HashSet<String>();
+      //      inputs.add(JBossEnterpriseBeanMetaData.class.getName());
+      //      List<String> javaCompRequiredAttachments = Arrays.asList(this.javaeeComponentInformer.getRequiredAttachments());
+      //      inputs.addAll(javaCompRequiredAttachments);
+      //      
+      //      this.setInputs(inputs);
       this.setDeploymentVisitor(this);
       this.setInput(JBossEnterpriseBeanMetaData.class);
       this.setComponentsOnly(true);
-     // setStage(DeploymentStages.REAL);
+      // setStage(DeploymentStages.REAL);
 
       // we output the container as a MC bean
       addOutput(BeanMetaData.class);
@@ -144,7 +156,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       //addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
    }
-
 
    /**
     * Processes a {@link DeploymentUnit} with {@link JBossEnterpriseBeanMetaData} to
@@ -190,17 +201,17 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.setEjbReferenceResolver(this.ejbReferenceResolver);
       singletonContainer.setMessageDestinationResolver(this.messageDestinationResolver);
       singletonContainer.setPersistenceUnitResolver(this.puResolver);
-      
+
       singletonContainer.instantiated();
 
       singletonContainer.processMetadata();
       // register the container with Ejb3Registry and also store reference locally (for use during
       // undeploy)
       this.registerContainer(sessionBean.getContainerName(), singletonContainer);
-      
+
       // attach the container to the deployment unit, with appropriate MC dependencies
       this.installContainer(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
-      
+
    }
 
    /**
@@ -213,7 +224,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       {
          String containerName = enterpriseBean.getContainerName();
          this.unregisterContainer(containerName);
-         
+
       }
    }
 
@@ -225,7 +236,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    {
       return JBossEnterpriseBeanMetaData.class;
    }
-   
+
    /**
     * Returns true if the passed <code>beanMetaData</code> corresponds to a Singleton bean.
     * Else returns false.
@@ -235,7 +246,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     */
    private boolean isSingletonBean(JBossEnterpriseBeanMetaData beanMetaData)
    {
-   // we are only interested in EJB3.1
+      // we are only interested in EJB3.1
       if (!beanMetaData.getJBossMetaData().isEJB31())
       {
          if (logger.isTraceEnabled())
@@ -258,7 +269,8 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       {
          if (logger.isTraceEnabled())
          {
-            logger.trace("Session bean " + beanMetaData.getName() + " is not of type " + JBossSessionBean31MetaData.class);
+            logger.trace("Session bean " + beanMetaData.getName() + " is not of type "
+                  + JBossSessionBean31MetaData.class);
          }
          return false;
       }
@@ -277,7 +289,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // it's a singleton bean
       return true;
    }
-   
+
    /**
     * Register the container with the {@link Ejb3Registry} and also store a reference to the container
     * locally in {@link #singletonContainers}
@@ -293,7 +305,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // we need to cleanup in undeploy(), so keep an reference of containers which we registered
       this.singletonContainers.put(containerName, container);
    }
-   
+
    /**
     * Unregisters the container with name <code>containerName</code>, from the
     * {@link Ejb3Registry} as well as removes the reference from {@link #singletonContainers}
@@ -310,25 +322,82 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Ejb3Registry.unregister(container);
       }
    }
-   
+
    /**
     * Creates a  MC bean for the <code>container</code> and adds it as a {@link BeanMetaData} to the unit
     * <p>
-    *   Appropriate dependencies are set on the container MC bean 
+    *   Appropriate dependencies identified through the {@link org.jboss.ejb3.EJBContainer#getDependencyPolicy()} 
+    *   are set on the container MC bean. 
     * </p>
+    * <p>
+    *   This method also processes any depends-on present on the singleton bean and adds the appropriate dependencies
+    *   to the container MC bean. When a singleton bean depends on the other singleton bean, we add the following dependencies
+    *   to the container MC bean:
+    *   <ul>
+    *       <li>  A dependency on the target EJB container </li>
+    *        <li> A dependency on each of the exposed JNDI names of the target EJB (so that the target EJB can be 
+    *               accessed through JNDI within the dependent EJB)</li>
+    *   </ul>            
+    *
     * @param unit The deployment unit
     * @param containerMCBeanName The MC bean name of the container
     * @param container The container being installed
     */
    private void installContainer(DeploymentUnit unit, String containerMCBeanName, AOPBasedSingletonContainer container)
    {
-      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container.getClass().getName());
+      BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container
+            .getClass().getName());
       containerBMDBuilder.setConstructorValue(container);
-      
-      logger.debug("Installing container for EJB " + container.getEJBName());
-      if (container.getDependencyPolicy() instanceof MCDependencyPolicy)
+
+      DependencyPolicy containerDependencyPolicy = container.getDependencyPolicy();
+
+      // Process @DependsOn/depends-on
+      // Add any dependencies based on @DependsOn/depends-on elements
+      JBossSessionBean31MetaData sessionBeanMetaData = (JBossSessionBean31MetaData) container.getMetaData();
+      String[] dependsOn = sessionBeanMetaData.getDependsOn();
+      if (dependsOn != null)
       {
-         MCDependencyPolicy policy = (MCDependencyPolicy) container.getDependencyPolicy();
+         EjbLinkResolver ejbLinkResolver = new EjbLinkResolver();
+         for (String dependency : dependsOn)
+         {
+            // resolve the EJB through the ejb link in depends-on
+            JBossEnterpriseBeanMetaData dependencyBean = ejbLinkResolver.resolveEJB(dependency, unit);
+            if (dependencyBean == null)
+            {
+               throw new RuntimeException("Could not resolve bean for @DependsOn/depends-on with ejb-name: "
+                     + dependency + " while processing EJB named " + container.getEJBName());
+            }
+            if (isSingletonBean(dependencyBean) == false)
+            {
+               throw new RuntimeException("@DependsOn/depends-on can only refer to Singleton beans. "
+                     + dependencyBean.getEjbClass() + " is not a singleton bean");
+            }
+            // when a singleton bean depends on the other singleton bean, we add:
+            // 1) A dependency on the target EJB container
+            // 2) A dependency on each of the exposed JNDI names of the target EJB (so that the 
+            // target EJB can be accessed through JNDI within the dependent EJB)
+            
+            // get the exposed JNDI names
+            List<String> jndiNames = this.getExposedJNDINames((JBossSessionBean31MetaData) dependencyBean);
+            for (String jndiName : jndiNames)
+            {
+               // add each jndi name as a dependency
+               // Note: The dependency resolution of a dependency with prefix JNDIKernelRegistryPlugin.JNDI_DEPENDENCY_PREFIX
+               // is handled by JNDIKernelRegistryPlugin, which does a JNDI lookup to see if the dependency is resolved.
+               // Effectively, none of the MC beans have to add the jndi name as an explicit supply. So when the 
+               // corresponding jndi binder binds this jndi name to JNDI tree, the dependency will be marked as resolved
+               containerDependencyPolicy.addDependency(JNDIKernelRegistryPlugin.JNDI_DEPENDENCY_PREFIX + jndiName);
+            }
+            String dependencyBeanContainerName = dependencyBean.getContainerName();
+            containerDependencyPolicy.addDependency(dependencyBeanContainerName);
+
+         }
+      }
+
+      logger.debug("Installing container for EJB " + container.getEJBName());
+      if (containerDependencyPolicy instanceof MCDependencyPolicy)
+      {
+         MCDependencyPolicy policy = (MCDependencyPolicy) containerDependencyPolicy;
          // depends
          Set<DependencyMetaData> dependencies = policy.getDependencies();
          if (dependencies != null && dependencies.isEmpty() == false)
@@ -363,33 +432,14 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
             }
          }
       }
-      // Add any dependencies based on @DependsOn/depends-on elements
-      JBossSessionBean31MetaData sessionBeanMetaData = (JBossSessionBean31MetaData) container.getMetaData();
-      String[] dependsOn = sessionBeanMetaData.getDependsOn();
-      if (dependsOn != null)
-      {
-         logger.debug("depends-on: ");
-         EjbLinkResolver ejbLinkResolver = new EjbLinkResolver();
-         for (String dependency : dependsOn)
-         {
-            String dependencyContainerName = ejbLinkResolver.resolveEjbContainerName(dependency, unit);
-            if (dependencyContainerName == null)
-            {
-               throw new RuntimeException(
-                     "Could not resolve container name for @DependsOn/depends-on with ejb-name: "
-                           + dependency + " while processing EJB named " + container.getEJBName());
-            }
-            logger.debug(dependencyContainerName);
-            containerBMDBuilder.addDependency(dependencyContainerName);
-         }
-      }
+
       // Add inject metadata on container
       String javaCompMCBeanName = this.getJavaEEComponentMCBeanName(unit);
       AbstractInjectionValueMetaData javaCompInjectMetaData = new AbstractInjectionValueMetaData(javaCompMCBeanName);
       // Too bad we have to know the field name. Need to do more research on MC to see if we can
       // add property metadata based on type instead of field name.
       containerBMDBuilder.addPropertyMetaData("javaComp", javaCompInjectMetaData);
-      
+
       // TODO: This is an undocumented nonsense of MC
       DeploymentUnit parentUnit = unit.getParent();
       parentUnit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
@@ -405,22 +455,21 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    {
       String applicationName = this.javaeeComponentInformer.getApplicationName(deploymentUnit);
       String moduleName = this.javaeeComponentInformer.getModulePath(deploymentUnit);
-      String componentName = this.javaeeComponentInformer.getComponentName(deploymentUnit); 
- 
+      String componentName = this.javaeeComponentInformer.getComponentName(deploymentUnit);
+
       final StringBuilder builder = new StringBuilder("jboss.naming:");
-      if(applicationName != null)
+      if (applicationName != null)
       {
          builder.append("application=").append(applicationName).append(",");
       }
       builder.append("module=").append(moduleName);
-      if(componentName != null)
+      if (componentName != null)
       {
          builder.append(",component=").append(componentName);
       }
       return builder.toString();
    }
-   
-   
+
    @Inject
    public void setPersistenceUnitResolver(PersistenceUnitDependencyResolver puResolver)
    {
@@ -432,16 +481,86 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    {
       this.messageDestinationResolver = messageDestResolver;
    }
-   
+
    @Inject
    public void setEjbRefResolver(EjbReferenceResolver ejbRefResolver)
    {
       this.ejbReferenceResolver = ejbRefResolver;
    }
-   
+
    @Inject
    public void setJavaEEComponentInformer(JavaEEComponentInformer componentInformer)
    {
       this.javaeeComponentInformer = componentInformer;
+   }
+
+   /**
+    * Returns the JNDI names that are exposed by this <code>sessionBean</code>.
+    * Returns an empty list if there are no JNDI names exposed by this session bean.
+    * <p>
+    *   This method checks whether the bean exposes a remote view, a local view and/or a nointerface view.
+    *   Depending on what views the bean exposes, the returned list will contain either or all of the
+    *   following JNDI names:
+    *   <ul>
+    *       <li> default local business interface JNDI name</li>
+    *       <li> default remote business interface JNDI name</li>
+    *       <li> nointerface view JNDI name</li>
+    *   </ul>
+    *       
+    * </p>
+    * @param sessionBean The session bean.
+    * @return
+    * TODO: Should we even consider business interface specific JNDI names? Will the dependent bean clients
+    * expect use these jndi names for lookup?
+    */
+   private List<String> getExposedJNDINames(JBossSessionBean31MetaData sessionBean)
+   {
+      List<String> jndiNames = new ArrayList<String>();
+    
+      DefaultJndiBindingPolicy jndiPolicy = DefaultJNDIBindingPolicyFactory.getDefaultJNDIBindingPolicy();
+      SessionBean31JNDINameResolver jndiNameResolver = JNDIPolicyBasedJNDINameResolverFactory.getJNDINameResolver(
+            sessionBean, jndiPolicy);
+      
+      // Determine if there are local/remote views
+      BusinessRemotesMetaData businessRemotes = sessionBean.getBusinessRemotes();
+      BusinessLocalsMetaData businessLocals = sessionBean.getBusinessLocals();
+      
+      boolean hasLocalBusinessView = (businessLocals != null && businessLocals.size() > 0);
+      boolean hasRemoteBusinessView = (businessRemotes != null && businessRemotes.size() > 0);
+      
+      // It's got a local business view, so resolve the default local business JNDI name
+      // and add it to the list
+      if (hasLocalBusinessView)
+      {
+         String defaultLocalJNDIName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
+         if (defaultLocalJNDIName != null)
+         {
+            jndiNames.add(defaultLocalJNDIName);
+         }
+      }
+      
+      // It's got a remote business view, so resolve the default remote business JNDI name
+      // and add it to the list
+      if (hasRemoteBusinessView)
+      {
+         String defaultRemoteJNDIName = jndiNameResolver.resolveRemoteBusinessDefaultJNDIName(sessionBean);
+         if (defaultRemoteJNDIName != null)
+         {
+            jndiNames.add(defaultRemoteJNDIName);
+         }
+      }
+      
+      // It's got a nointerface view, so resolve the jndi name and add it to the list
+      if (sessionBean.isNoInterfaceBean())
+      {
+         String noInterfaceJNDIName = jndiNameResolver.resolveNoInterfaceJNDIName(sessionBean);
+         if (noInterfaceJNDIName != null)
+         {
+            jndiNames.add(noInterfaceJNDIName);
+         }
+
+      }
+      // return the exposed JNDI names
+      return jndiNames;
    }
 }

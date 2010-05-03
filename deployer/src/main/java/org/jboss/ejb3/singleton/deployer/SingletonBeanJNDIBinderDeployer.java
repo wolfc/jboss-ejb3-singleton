@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationHandler;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -79,6 +78,11 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
    private final static String CLIENT_INTERCEPTOR_STACK_NAME = "SingletonSessionClientInterceptors";
 
    private static Logger logger = Logger.getLogger(SingletonBeanJNDIBinderDeployer.class);
+   
+   /**
+    * Prefix that will be used for JNDI binder MC bean names
+    */
+   private static final String JNDI_BINDER_MC_BEAN_PREFIX = "jndibinder:";
 
    /**
     * 
@@ -212,8 +216,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessRemote);
 
             JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
-            String binderMCBeanName = "<JNDIBinder><BusinessRemote:" + businessRemote + "><Bean:"
-                  + sessionBean.getEjbName() + "><Unit:" + unit.getName() + ">";
+            String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
             BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
             DeploymentUnit parentUnit = unit.getParent();
             parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -237,8 +240,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          Object proxy = proxyFactory.createProxy(allRemoteinterfaces.toArray(new Class<?>[allRemoteinterfaces.size()]),
                invocationHandler);
          JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultRemoteJNDIName, proxy);
-         String binderMCBeanName = "<DefaultRemoteJNDIBinder><Bean:" + sessionBean.getEjbName() + "><Unit:"
-               + unit.getName() + ">";
+         String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + defaultRemoteJNDIName;
          BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
          DeploymentUnit parentUnit = unit.getParent();
          parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -260,8 +262,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             Object proxy = proxyFactory.createProxy(allRemoteinterfaces
                   .toArray(new Class<?>[allRemoteinterfaces.size()]), invocationHandler);
             JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
-            String binderMCBeanName = "<DefaultRemoteJNDIBinder><InvokerLocatorURL:" + invokerLocatorURL + "><Bean:"
-                  + sessionBean.getEjbName() + "><Unit:" + unit.getName() + ">";
+            String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
             BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
             DeploymentUnit parentUnit = unit.getParent();
             parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -333,8 +334,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessLocal);
 
          JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
-         String binderMCBeanName = "<JNDIBinder><BusinessLocal:" + businessLocal + "><Bean:" + sessionBean.getEjbName()
-               + "><Unit:" + unit.getName() + ">";
+         String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
          BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
          DeploymentUnit parentUnit = unit.getParent();
          parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -349,8 +349,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          Object proxy = proxyFactory.createProxy(allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]),
                invocationHandler);
          JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultBusinessLocalJNDIName, proxy);
-         String binderMCBeanName = "<DefaultLocalJNDIBinder><Bean:" + sessionBean.getEjbName() + "><Unit:"
-               + unit.getName() + ">";
+         String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + defaultBusinessLocalJNDIName;
          BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
          DeploymentUnit parentUnit = unit.getParent();
          parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -369,8 +368,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             Object proxy = proxyFactory.createProxy(
                   allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]), invocationHandler);
             JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
-            String binderMCBeanName = "<DefaultLocalJNDIBinder><Bean:" + sessionBean.getEjbName() + "><Unit:"
-                  + unit.getName() + ">" + UUID.randomUUID();
+            String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
             BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
             DeploymentUnit parentUnit = unit.getParent();
             parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
@@ -425,7 +423,11 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       builder.setConstructorValue(jndiBinder);
 
       String containerName = container.getXml().getContainerName();
-      builder.addDemand(containerName, ControllerState.START, ControllerState.DESCRIBED, null);
+      // the proxies/invocation handlers for singleton do NOT push the container
+      // states. So let's just depend on a START state container, so that when the 
+      // jndi binder binds the proxies, they will be ready to use (i.e. will be sure that
+      // the container is available for invocation).
+      builder.addDemand(containerName, ControllerState.START, ControllerState.START, null);
       return builder.getBeanMetaData();
 
    }

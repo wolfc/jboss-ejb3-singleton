@@ -31,7 +31,7 @@ import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeansMetaData;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 
 /**
- * A resolver which is responsible for resolving an EJB container name from an
+ * A resolver which is responsible for resolving an EJB metadata from an
  * ejb-link and a {@link DeploymentUnit}
  * <p>
  *  An ejb-link can have the following syntax:
@@ -52,33 +52,51 @@ public class EjbLinkResolver
    private static Logger logger = Logger.getLogger(EjbLinkResolver.class);
    
    /**
-    * Returns the ejb container name for the passed <code>ejbLink</code>. The container name
+    * Returns the {@link JBossEnterpriseBeanMetaData} for the passed <code>ejbLink</code>. The {@link JBossEnterpriseBeanMetaData}
     * is resolved using the {@link JBossMetaData} found in the <code>deploymentUnit</code>.
     * <p>
     *   This method first obtains the top level deployment unit for the passed <code>deploymentUnit</code>
     *   through a call to {@link DeploymentUnit#getTopLevel()}. It then starts searching for an appropriate
-    *   EJB, within the top level deployment unit and its child deployment units, until it find one.
+    *   EJB, within the top level deployment unit and its child deployment units, until it finds one.
     * </p>
     * <p>
-    *   This method will return null, if the container name cannot be resolved.
+    *   This method will return null, if an appropriate {@link JBossEnterpriseBeanMetaData} cannot be found.
     * </p>
     * @param ejbLink The ejbLink which has to be resolved
-    * @param deploymentUnit The deployment unit within which the container has to be scanned for
+    * @param deploymentUnit The deployment unit within which the EJB has to be scanned for
+    * 
     * @return
     */
-   public String resolveEjbContainerName(String ejbLink, DeploymentUnit deploymentUnit)
+   public JBossEnterpriseBeanMetaData resolveEJB(String ejbLink, DeploymentUnit deploymentUnit)
    {
       // get the top level DU
       DeploymentUnit topLevelDeploymentUnit = deploymentUnit.getTopLevel();
+      // resolve from top level DU and its child DUs
+      return this.resolveEjbWithinChildDeploymentUnits(ejbLink, topLevelDeploymentUnit);
+   }
+   
+   /**
+    * Returns the {@link JBossEnterpriseBeanMetaData} for the passed <code>ejbLink</code>. The {@link JBossEnterpriseBeanMetaData}
+    * is resolved using the {@link JBossMetaData} found in the <code>deploymentUnit</code>.
+    * <p>
+    *   This method will return null, if an appropriate {@link JBossEnterpriseBeanMetaData} cannot be found.
+    * </p>
+    * 
+    * @param The ejbLink which has to be resolved
+    * @param deploymentUnit The deployment unit within which the container has to be scanned for
+    * @return
+    */
+   private JBossEnterpriseBeanMetaData resolveEjbWithinChildDeploymentUnits(String ejbLink, DeploymentUnit deploymentUnit)
+   {
+      // get metadata from the DU
+      JBossMetaData jbossMetaData = this.getMetaData(deploymentUnit);
+      // first try to resolve in this DU
+      JBossEnterpriseBeanMetaData bean = this.getEjbMetaData(ejbLink, jbossMetaData, deploymentUnit);
       
-      // now start looking for the EJB corresponding to the ejb-link within the
-      // top level deployment unit
-      JBossMetaData jbossMetaData = this.getMetaData(topLevelDeploymentUnit);
-      String ejbContainerName = this.getEjbContainerName(ejbLink, jbossMetaData, topLevelDeploymentUnit);
       // not yet resolved, so check in child deployment units
-      if (ejbContainerName == null)
+      if (bean == null)
       {
-         List<DeploymentUnit> childUnits = topLevelDeploymentUnit.getChildren();
+         List<DeploymentUnit> childUnits = deploymentUnit.getChildren();
          if (childUnits == null)
          {
             // no resolution
@@ -87,22 +105,21 @@ public class EjbLinkResolver
          
          for (DeploymentUnit childUnit : childUnits)
          {
-            ejbContainerName = this.resolveEjbContainerName(ejbLink, childUnit);
+            // try to resolve in child DU
+            bean = this.resolveEjbWithinChildDeploymentUnits(ejbLink, childUnit);
             // resolved the ejb-link
-            if (ejbContainerName != null)
+            if (bean != null)
             {
-               logger.debug("Resolved container name: " + ejbContainerName + " for ejb-link: " + ejbLink + " in unit " + childUnit);
-               return ejbContainerName;
+               logger.debug("Resolved container name: " + bean.getContainerName() + " for ejb-link: " + ejbLink + " in unit " + childUnit);
+               return bean;
             }
          }
       }
-      return ejbContainerName;
+      return bean;
    }
-
+   
    /**
-    * Returns the container name corresponding to the passed <code>ejbLink</code>. The container name
-    * is obtained from an appropriate enterprise bean within the passed <code>jbossMetaData</code>, through
-    * a call to {@link JBossEnterpriseBeanMetaData#getContainerName()}.
+    * Returns the {@link JBossEnterpriseBeanMetaData} corresponding to the passed <code>ejbLink</code>. 
     * <p>
     *   An enterprise bean from the {@link JBossMetaData} is considered to be a match, if the name of the 
     *   bean is equal to the name part of the passed <code>ejbLink</code> and if the unit name is equal to the
@@ -113,17 +130,12 @@ public class EjbLinkResolver
     *       the passed unit name is abc.jar, then it is considered to be a match.
     *   </p>    
     * </p>
-    * <p>
-    *   Note: It is expected that any matching {@link JBossEnterpriseBeanMetaData} will have the correct container name set.
-    *   This method just gives a call to {@link JBossEnterpriseBeanMetaData#getContainerName()} on an appropriate instance
-    *   of {@link JBossEnterpriseBeanMetaData}
-    * </p>
     * @param ejbLink The ejbLink for which the container name has to be found
     * @param jbossMetaData The metadata which will be scanned for any potential matches for the ejbLink
-    * @param unit The deployment unit within which the ejb container name is to be looked for
+    * @param unit The deployment unit within which the {@link JBossEnterpriseBeanMetaData} is to be looked for
     * @return
     */
-   protected String getEjbContainerName(String ejbLink, JBossMetaData jbossMetaData, DeploymentUnit unit)
+   protected JBossEnterpriseBeanMetaData getEjbMetaData(String ejbLink, JBossMetaData jbossMetaData, DeploymentUnit unit)
    {
       if (jbossMetaData == null)
       {
@@ -162,7 +174,7 @@ public class EjbLinkResolver
             if (moduleName == null || moduleName.equals(unit.getSimpleName()))
             {
                // found a match, return the container name
-               return enterpriseBean.getContainerName();
+               return enterpriseBean;
             }
          }
       }

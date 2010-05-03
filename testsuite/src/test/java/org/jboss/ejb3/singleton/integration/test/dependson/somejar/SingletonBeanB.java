@@ -19,16 +19,46 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.ejb3.singleton.integration.test.dependson;
+package org.jboss.ejb3.singleton.integration.test.dependson.somejar;
+
+import javax.annotation.PostConstruct;
+import javax.ejb.DependsOn;
+import javax.ejb.Remote;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 
 /**
- * Echo
+ * SingletonBeanB
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public interface Echo
+@Singleton
+@Remote (Echo.class)
+@Startup
+@DependsOn ("SingletonBeanA")
+public class SingletonBeanB implements Echo
 {
 
-   String echo(String msg);
+   @PostConstruct
+   public void onConstruct() throws Exception
+   {
+      Context ctx = new InitialContext();
+      Echo otherSingleton = (Echo) ctx.lookup(SingletonBeanA.JNDI_NAME);
+      String msg = "Msg from onConstruct";
+      String returnMsg = otherSingleton.echo(msg);
+      if (!msg.equals(returnMsg))
+      {
+         throw new RuntimeException("Unexpected return value from " + otherSingleton);
+      }
+      
+   }
+   @Override
+   public String echo(String msg)
+   {
+      return msg;
+   }
+
 }

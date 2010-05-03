@@ -19,7 +19,10 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.ejb3.singleton.integration.test.dependson;
+package org.jboss.ejb3.singleton.integration.test.dependson.somejar;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.ejb.Remote;
 import javax.ejb.Singleton;
@@ -27,24 +30,34 @@ import javax.ejb.Singleton;
 import org.jboss.ejb3.annotation.RemoteBinding;
 
 /**
- * SingletonBeanA
+ * CallTrackerBean
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
 @Singleton
-@Remote (Echo.class)
-@RemoteBinding (jndiBinding = SingletonBeanA.JNDI_NAME)
-public class SingletonBeanA implements Echo
+@Remote (CallTracker.class)
+@RemoteBinding (jndiBinding = CallTrackerBean.JNDI_NAME)
+public class CallTrackerBean implements CallTracker
 {
 
-   public static final String JNDI_NAME = "SingletonBeanAJNDIName";
-
+   public static final String JNDI_NAME = "DependsOnTestCallTrackerBean";
+   
+   private List<String> callSequence = new ArrayList<String>();
+   
    @Override
-   public String echo(String msg)
+   public List<String> getCallSequence()
    {
-      return msg;
+      return this.callSequence;
    }
    
    
+   @Override
+   public void trackCall(String caller)
+   {
+      this.callSequence.add(caller);
+      
+   }
+   
+
 }
