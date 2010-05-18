@@ -302,6 +302,22 @@
                     </execution>
 
                 </executions>
+                <dependencies>
+                	<!--  We need this dependency because the maven-jboss-as-control-plugin connects to the
+                	MBeanServer to issue a stop request. The MBeanServerConnection returned is actually a
+                	proxy which requires a JBoss specific class (present in jboss-system-client.jar) to be
+                	available in the classpath.
+                	See https://jira.jboss.org/browse/JBAS-7818?focusedCommentId=12523915#action_12523915 
+                	for details
+                	  -->
+                	<dependency>
+                		<groupId>org.jboss.jbossas</groupId>
+                		<artifactId>jboss-as-system</artifactId>
+                		<classifier>client</classifier>
+                		<version>6.0.0.20100429-M3</version>
+                		<scope>runtime</scope>
+                	</dependency>
+                </dependencies>
                 
             </plugin>
 
