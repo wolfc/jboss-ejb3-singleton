@@ -305,62 +305,70 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public InvocationResponse dynamicInvoke(Invocation invocation) throws Throwable
    {
-      /*
-       * Obtain the target method (unmarshall from invocation)
-       */
 
-      // Cast
-      assert invocation instanceof MethodInvocation : AOPBasedSingletonContainer.class.getName()
-            + ".dynamicInoke supports only " + MethodInvocation.class.getSimpleName() + ", but has been passed: "
-            + invocation.getClass();
+      // Set the TCCL to the container's CL during, required to unmarshalling methods/params from the bean impl class
+      ClassLoader originalLoader = Thread.currentThread().getContextClassLoader();
 
-      MethodInvocation methodInvocation = (MethodInvocation) invocation;
-
-      // Get the method hash
-      long methodHash = methodInvocation.getMethodHash();
-      if (logger.isTraceEnabled())
-      {
-         logger.trace("Received dynamic invocation for method with hash: " + methodHash);
-      }
-
-      // Get the Method via MethodInfo from the Advisor
-      Advisor advisor = this.getAdvisor();
-      MethodInfo methodInfo = advisor.getMethodInfo(methodHash);
-
-      // create a container invocation
-      AOPBasedContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo,
-            methodInvocation.getArguments());
+      // Set the Container's CL as TCL, required to unmarshall methods from the bean impl class
+      Thread.currentThread().setContextClassLoader(this.getClassloader());
       try
       {
-         // TODO: This is legacy code copied from StatelessContainer/SessionSpecContainer of ejb3-core
-         // Get the invoked method from invocation metadata
-         Object objInvokedMethod = invocation.getMetaData(SessionSpecRemotingMetadata.TAG_SESSION_INVOCATION,
-               SessionSpecRemotingMetadata.KEY_INVOKED_METHOD);
-         assert objInvokedMethod != null : "Invoked Method must be set on invocation metadata";
-         assert objInvokedMethod instanceof SerializableMethod : "Invoked Method set on invocation metadata is not of type "
-               + SerializableMethod.class.getName() + ", instead: " + objInvokedMethod;
-         SerializableMethod invokedMethod = (SerializableMethod) objInvokedMethod;
-
-         // push onto stack
-//         SessionSpecContainer.invokedMethod.push(invokedMethod);
-
-         // pass the control to the simple singleton container
-         Object result = this.delegate.invoke(containerInvocation);
-
-         // create an InvocationResponse out of the result 
-         Map<Object, Object> responseContextInfo = containerInvocation.getResponseContextInfo();
-         InvocationResponse invocationResponse = marshallResponse(invocation, result, responseContextInfo);
-         return invocationResponse;
-
-      }
-      catch (Throwable throwable)
-      {
-         Map<Object, Object> responseContextInfo = containerInvocation.getResponseContextInfo();
-         return marshallException(invocation, throwable, responseContextInfo);
+         /*
+          * Obtain the target method (unmarshall from invocation)
+          */
+   
+         // Cast
+         assert invocation instanceof MethodInvocation : AOPBasedSingletonContainer.class.getName()
+               + ".dynamicInoke supports only " + MethodInvocation.class.getSimpleName() + ", but has been passed: "
+               + invocation.getClass();
+   
+         MethodInvocation methodInvocation = (MethodInvocation) invocation;
+   
+         // Get the method hash
+         long methodHash = methodInvocation.getMethodHash();
+         if (logger.isTraceEnabled())
+         {
+            logger.trace("Received dynamic invocation for method with hash: " + methodHash);
+         }
+   
+         // Get the Method via MethodInfo from the Advisor
+         Advisor advisor = this.getAdvisor();
+         MethodInfo methodInfo = advisor.getMethodInfo(methodHash);
+   
+         // create a container invocation
+         AOPBasedContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo,
+               methodInvocation.getArguments());
+         try
+         {
+            // TODO: This is legacy code copied from StatelessContainer/SessionSpecContainer of ejb3-core
+            // Get the invoked method from invocation metadata
+            Object objInvokedMethod = invocation.getMetaData(SessionSpecRemotingMetadata.TAG_SESSION_INVOCATION,
+                  SessionSpecRemotingMetadata.KEY_INVOKED_METHOD);
+            assert objInvokedMethod != null : "Invoked Method must be set on invocation metadata";
+            assert objInvokedMethod instanceof SerializableMethod : "Invoked Method set on invocation metadata is not of type "
+                  + SerializableMethod.class.getName() + ", instead: " + objInvokedMethod;
+            SerializableMethod invokedMethod = (SerializableMethod) objInvokedMethod;
+   
+   
+            // pass the control to the simple singleton container
+            Object result = this.delegate.invoke(containerInvocation);
+   
+            // create an InvocationResponse out of the result 
+            Map<Object, Object> responseContextInfo = containerInvocation.getResponseContextInfo();
+            InvocationResponse invocationResponse = marshallResponse(invocation, result, responseContextInfo);
+            return invocationResponse;
+   
+         }
+         catch (Throwable throwable)
+         {
+            Map<Object, Object> responseContextInfo = containerInvocation.getResponseContextInfo();
+            return marshallException(invocation, throwable, responseContextInfo);
+         }
       }
       finally
       {
-  //       SessionSpecContainer.invokedMethod.pop();
+         // reset the TCCL to the original CL
+         Thread.currentThread().setContextClassLoader(originalLoader);         
       }
 
    }
