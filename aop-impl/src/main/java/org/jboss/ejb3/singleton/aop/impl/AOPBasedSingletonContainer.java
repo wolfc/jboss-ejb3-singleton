@@ -26,7 +26,9 @@ import java.lang.reflect.Method;
 import java.util.Hashtable;
 import java.util.Map;
 
+import javax.ejb.EJBException;
 import javax.ejb.Handle;
+import javax.ejb.Timer;
 import javax.ejb.TimerService;
 import javax.naming.Context;
 
@@ -37,6 +39,7 @@ import org.jboss.aop.joinpoint.Invocation;
 import org.jboss.aop.joinpoint.InvocationResponse;
 import org.jboss.aop.joinpoint.MethodInvocation;
 import org.jboss.aop.util.MethodHashing;
+import org.jboss.beans.metadata.api.annotations.Inject;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Container;
@@ -61,9 +64,12 @@ import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaD
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
+import org.jboss.ejb3.timerservice.spi.TimedObjectInvoker;
+import org.jboss.ejb3.timerservice.spi.TimerServiceFactory;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
+import org.jboss.metadata.ejb.spec.NamedMethodMetaData;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 
 /**
@@ -79,7 +85,7 @@ import org.jboss.reloaded.naming.spi.JavaEEComponent;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler, TimedObjectInvoker
 {
 
    /**
@@ -107,6 +113,13 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected JavaEEComponent javaComp;
    
    protected static final String LIFECYCLE_CALLBACK_STACK_NAME = "SingletonBeanLifecycleCallBackStack";
+   
+   protected TimerService timerService;
+
+   protected TimerServiceFactory timerServiceFactory;
+
+   protected Method timeoutMethod;
+
    
    /**
     * Returns the AOP domain name which this container uses
@@ -150,6 +163,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this);
       this.delegate.setBeanInstanceManager(instanceManager);
 
+      // init the timeout method
+      this.initTimeout();
    }
 
    /**
@@ -190,10 +205,41 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected void lockedStart() throws Exception
    {
       super.lockedStart();
-
-      // pass on the control to our simple singleton container
-      this.delegate.start();
+      try
+      {
+         // just create the timerservice, restoring of
+         // any timers which were suspended during undeployment
+         // will be done, through afterStart(), once the container has fully started.
+         timerService = timerServiceFactory.createTimerService(this);
+         // pass on the control to our simple singleton container
+         this.delegate.start();
+      }
+      catch (Exception e)
+      {
+         try
+         {
+            this.lockedStop();
+         }
+         catch (Exception ignore)
+         {
+            logger.debug("Failed to cleanup after start() failure, exception will be ignored", ignore);
+         }
+         throw e;
+      }
+      
    }
+   
+   /**
+    * Restores the timerservice, now that the container is functional
+    */
+   @Override
+   protected void afterStart()
+   {
+      super.afterStart();
+      // restore timerservice
+      this.timerServiceFactory.restoreTimerService(timerService);
+   }
+   
 
    /**
     * @see org.jboss.ejb3.EJBContainer#initializePool()
@@ -274,8 +320,13 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    protected void lockedStop() throws Exception
    {
-      super.lockedStop();
+      if (timerService != null)
+      {
+         timerServiceFactory.suspendTimerService(timerService);
+         timerService = null;
+      }
       this.delegate.stop();
+      super.lockedStop();
    }
 
    /**
@@ -740,6 +791,72 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       {
          this.popContext();
          this.popEnc();
+      }
+   }
+   
+   /**
+    * Init the timeout method (if any) on the bean 
+    */
+   private void initTimeout()
+   {
+      NamedMethodMetaData timeoutMethodMetaData = this.getMetaData().getTimeoutMethod();
+      if (timeoutMethodMetaData != null)
+      {
+         this.timeoutMethod = this.getTimeoutCallback(timeoutMethodMetaData, this.getBeanClass());
+      }
+   }
+
+   @Inject
+   public void setTimerServiceFactory(TimerServiceFactory factory)
+   {
+      this.timerServiceFactory = factory;
+   }
+
+   /**
+    * {@inheritDoc}
+    */
+   @Override
+   public String getTimedObjectId()
+   {
+      return this.getObjectName().getCanonicalName();
+   }
+
+   /**
+    * Call the timeout method on the bean.
+    * 
+    * <p>
+    *   Internally, this method invokes the timeout method just like
+    *   any other bean method invocation (i.e. passes it through the necessary interceptors)
+    * </p>
+    * {@inheritDoc}
+    */
+   @Override
+   public void callTimeout(Timer timer) throws Exception
+   {
+      if (this.timeoutMethod == null)
+      {
+         throw new EJBException("No timeout method found for bean " + this.beanClassName);
+      }
+      Object[] args =
+      {timer};
+      if (this.timeoutMethod.getParameterTypes().length == 0)
+         args = null;
+      ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+      try
+      {
+         //AllowedOperationsAssociation.pushInMethodFlag(AllowedOperationsFlags.IN_EJB_TIMEOUT);
+         
+         // invoke
+         this.invoke((Serializable) null, (Class<?>) null, this.timeoutMethod, args);
+
+         //         finally
+         //         {
+         //            AllowedOperationsAssociation.popInMethodFlag();
+         //         }
+      }
+      finally
+      {
+         Thread.currentThread().setContextClassLoader(oldLoader);
       }
    }
    
