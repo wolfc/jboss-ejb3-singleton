@@ -546,7 +546,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public TimerService getTimerService()
    {
-      throw new UnsupportedOperationException("NYI");
+      return this.timerService;
    }
 
    /**
@@ -555,7 +555,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public TimerService getTimerService(Object key)
    {
-      throw new UnsupportedOperationException("NYI");
+      // TODO: hmm, what exactly is this method for?
+      return timerService;
    }
 
    /**

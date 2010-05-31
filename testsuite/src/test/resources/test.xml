@@ -166,7 +166,8 @@
          haltonerror="false"
          haltonfailure="false"
          showoutput="yes"
-         fork="true">
+         fork="true"
+      	failureproperty = "test.failure">
 
          <sysproperty key="basedir" value="${basedir}"/>
          <sysproperty key="build.testlog" value="${build.testlog}"/>
@@ -201,6 +202,7 @@
             </fileset>
          </batchtest>
       </junit>
+   	<antcall target="check.test.failure"/>
    </target>
 
    <target name="one-test" depends="init" if="test"
@@ -242,7 +244,8 @@
          haltonerror="false"
          haltonfailure="false"
          showoutput="yes"
-         fork="true">
+         fork="true"
+      	failureproperty = "test.failure">
 
          <sysproperty key="basedir" value="${basedir}"/>
          <sysproperty key="build.testlog" value="${build.testlog}"/>
@@ -260,6 +263,8 @@
          <formatter type="xml" usefile="true"/>
          <test name="${test}" todir="${build.reports}"/>
       </junit>
+   	
+   		<antcall target="check.test.failure"/>
    </target>
 
    
@@ -284,5 +289,9 @@
       </antcall>
       
    </target>
+   	
+   	<target name="check.test.failure" if="test.failure">
+   		<fail message="Some tests FAILED. Check the logs for details"/>
+   	</target>
 
 </project>   
