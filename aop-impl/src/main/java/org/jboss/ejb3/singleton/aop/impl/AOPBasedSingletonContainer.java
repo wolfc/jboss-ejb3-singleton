@@ -114,10 +114,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    
    protected static final String LIFECYCLE_CALLBACK_STACK_NAME = "SingletonBeanLifecycleCallBackStack";
    
-   protected TimerService timerService;
-
-   protected TimerServiceFactory timerServiceFactory;
-
    protected Method timeoutMethod;
 
    
@@ -205,41 +201,9 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected void lockedStart() throws Exception
    {
       super.lockedStart();
-      try
-      {
-         // just create the timerservice, restoring of
-         // any timers which were suspended during undeployment
-         // will be done, through afterStart(), once the container has fully started.
-         timerService = timerServiceFactory.createTimerService(this);
-         // pass on the control to our simple singleton container
-         this.delegate.start();
-      }
-      catch (Exception e)
-      {
-         try
-         {
-            this.lockedStop();
-         }
-         catch (Exception ignore)
-         {
-            logger.debug("Failed to cleanup after start() failure, exception will be ignored", ignore);
-         }
-         throw e;
-      }
-      
+      // pass on the control to our simple singleton container
+      this.delegate.start();
    }
-   
-   /**
-    * Restores the timerservice, now that the container is functional
-    */
-   @Override
-   protected void afterStart()
-   {
-      super.afterStart();
-      // restore timerservice
-      this.timerServiceFactory.restoreTimerService(timerService);
-   }
-   
 
    /**
     * @see org.jboss.ejb3.EJBContainer#initializePool()
@@ -320,11 +284,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    protected void lockedStop() throws Exception
    {
-      if (timerService != null)
-      {
-         timerServiceFactory.suspendTimerService(timerService);
-         timerService = null;
-      }
       this.delegate.stop();
       super.lockedStop();
    }
@@ -538,25 +497,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public Object getMBean()
    {
       throw new UnsupportedOperationException("NYI");
-   }
-
-   /**
-    * @see org.jboss.ejb3.Container#getTimerService()
-    */
-   @Override
-   public TimerService getTimerService()
-   {
-      return this.timerService;
-   }
-
-   /**
-    * @see org.jboss.ejb3.Container#getTimerService(java.lang.Object)
-    */
-   @Override
-   public TimerService getTimerService(Object key)
-   {
-      // TODO: hmm, what exactly is this method for?
-      return timerService;
    }
 
    /**
@@ -807,12 +747,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       }
    }
 
-   @Inject
-   public void setTimerServiceFactory(TimerServiceFactory factory)
-   {
-      this.timerServiceFactory = factory;
-   }
-
    /**
     * {@inheritDoc}
     */
@@ -859,6 +793,15 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       {
          Thread.currentThread().setContextClassLoader(oldLoader);
       }
+   }
+   
+   /**
+    * {@inheritDoc}
+    */
+   @Override
+   protected TimedObjectInvoker getTimedObjectInvoker()
+   {
+      return this;
    }
    
 }
