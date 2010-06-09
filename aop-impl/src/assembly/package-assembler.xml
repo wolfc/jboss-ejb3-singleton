@@ -37,6 +37,7 @@
         <include>org.jboss.ejb3.concurrency:jboss-ejb3-concurrency-aop:jar</include>
         <include>org.jboss.ejb3.concurrency:jboss-ejb3-concurrency-impl:jar</include>
         <include>org.jboss.metadata:jboss-metadata-ejb:jar</include>
+        <include>org.jboss.ejb3:jboss-ejb3-timerservice-spi:jar</include>
       </includes>      
       
     </dependencySet>

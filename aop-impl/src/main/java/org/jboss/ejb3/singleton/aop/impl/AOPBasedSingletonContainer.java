@@ -29,7 +29,6 @@ import java.util.Map;
 import javax.ejb.EJBException;
 import javax.ejb.Handle;
 import javax.ejb.Timer;
-import javax.ejb.TimerService;
 import javax.naming.Context;
 
 import org.jboss.aop.Advisor;
@@ -39,7 +38,6 @@ import org.jboss.aop.joinpoint.Invocation;
 import org.jboss.aop.joinpoint.InvocationResponse;
 import org.jboss.aop.joinpoint.MethodInvocation;
 import org.jboss.aop.util.MethodHashing;
-import org.jboss.beans.metadata.api.annotations.Inject;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Container;
@@ -64,8 +62,8 @@ import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaD
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
+import org.jboss.ejb3.timerservice.spi.MultiTimeoutMethodTimedObjectInvoker;
 import org.jboss.ejb3.timerservice.spi.TimedObjectInvoker;
-import org.jboss.ejb3.timerservice.spi.TimerServiceFactory;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
@@ -85,7 +83,7 @@ import org.jboss.reloaded.naming.spi.JavaEEComponent;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler, TimedObjectInvoker
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler, MultiTimeoutMethodTimedObjectInvoker
 {
 
    /**
@@ -768,31 +766,13 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    @Override
    public void callTimeout(Timer timer) throws Exception
    {
+      // the method annotated with @Timeout or it's xml equivalent
       if (this.timeoutMethod == null)
       {
          throw new EJBException("No timeout method found for bean " + this.beanClassName);
       }
-      Object[] args =
-      {timer};
-      if (this.timeoutMethod.getParameterTypes().length == 0)
-         args = null;
-      ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-      try
-      {
-         //AllowedOperationsAssociation.pushInMethodFlag(AllowedOperationsFlags.IN_EJB_TIMEOUT);
-         
-         // invoke
-         this.invoke((Serializable) null, (Class<?>) null, this.timeoutMethod, args);
-
-         //         finally
-         //         {
-         //            AllowedOperationsAssociation.popInMethodFlag();
-         //         }
-      }
-      finally
-      {
-         Thread.currentThread().setContextClassLoader(oldLoader);
-      }
+      // invoke the timeout  
+      this.callTimeout(timer, this.timeoutMethod);
    }
    
    /**
@@ -803,5 +783,76 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       return this;
    }
+
+   /**
+    * {@inheritDoc}
+    * 
+    * @throws IllegalArgumentException If the passed <code>timeoutMethodName</code> or <code>timer</code> is null
+    */
+   @Override
+   public void callTimeout(Timer timer, String timeoutMethodName, String[] timeoutMethodParams) throws Exception
+   {
+      if (timer == null)
+      {
+         throw new IllegalArgumentException("Timer instance is null on callTimeout");
+      }
+      if (timeoutMethodName == null)
+      {
+         throw new IllegalArgumentException("Timeout method name is null on callTimeout");
+      }
+      // load the method param classes
+      Class<?>[] methodParams = null;
+      if (timeoutMethodParams != null)
+      {
+         methodParams = new Class<?>[timeoutMethodParams.length];
+         int i = 0;
+         for (String param : timeoutMethodParams)
+         {
+            Class<?> methodParam = this.classloader.loadClass(param);
+            methodParams[i++] = methodParam;
+         }
+      }
+      Method autoTimeoutMethod = null;
+      try
+      {
+         // NOTE: We do *not* do any semantic validations on the timeout method. 
+         // Any relevant validations should be done outside the container during metadata
+         // creation stage.
+         autoTimeoutMethod = this.getBeanClass().getMethod(timeoutMethodName, methodParams);
+      }
+      catch (NoSuchMethodException nsme)
+      {
+         logger.error("Timeout method not found for bean " + this.getEjbName() + " for timer " + timer);
+         throw nsme;
+      }
+
+      this.callTimeout(timer, autoTimeoutMethod);
+      
+   }
    
+   /**
+    * Invokes the passed timeout method for the passed {@link Timer}, on a bean instance.
+    * 
+    * @param timer The {@link Timer} for which the timeout has occurred 
+    * @param tMethod The timeout method
+    * @throws Exception If any exception occurs during invocation of timeout method on the target bean
+    * @throws {@link NullPointerException} If the passed <code>tMethod</code> is null
+    */
+   private void callTimeout(Timer timer, Method tMethod) throws Exception
+   {
+      Object[] args =
+      {timer};
+      if (tMethod.getParameterTypes().length == 0)
+         args = null;
+      ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+      try
+      {
+         // invoke
+         this.invoke((Serializable) null, (Class<?>) null, tMethod, args);
+      }
+      finally
+      {
+         Thread.currentThread().setContextClassLoader(oldLoader);
+      }
+   }
 }
