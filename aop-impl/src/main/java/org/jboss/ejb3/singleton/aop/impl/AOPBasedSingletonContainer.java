@@ -22,7 +22,10 @@
 package org.jboss.ejb3.singleton.aop.impl;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -42,6 +45,7 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Container;
 import org.jboss.ejb3.DependencyPolicy;
+import org.jboss.ejb3.EjbEncFactory;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.common.resolvers.spi.EjbReference;
@@ -68,6 +72,7 @@ import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 import org.jboss.metadata.ejb.spec.NamedMethodMetaData;
+import org.jboss.reloaded.naming.CurrentComponent;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 
 /**
@@ -222,24 +227,28 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
 //      // through the correct interceptors. So let's pass the call to the beanContainer
 //      this.getBeanContainer().invokeCallback(beanContext, callbackAnnotationClass,LIFECYCLE_CALLBACK_STACK_NAME);
 //   }
-//   /**
-//    * @see org.jboss.ejb3.EJBContainer#pushEnc()
-//    */
-//   @Override
-//   protected void pushEnc()
-//   {
-//      // noop (we now rely on the new JavaEEComponent based naming)
-//   }
-//   
-//   /**
-//    * @see org.jboss.ejb3.EJBContainer#popEnc()
-//    */
-//   @Override
-//   protected void popEnc()
-//   {
-//      // noop (we now rely on the new JavaEEComponent based naming)
-//
-//   }
+   /**
+    * @see org.jboss.ejb3.EJBContainer#pushEnc()
+    */
+   @Override
+   protected void pushEnc()
+   {
+      CurrentComponent.push(this.javaComp);
+   }
+   
+   /**
+    * @see org.jboss.ejb3.EJBContainer#popEnc()
+    */
+   @Override
+   protected void popEnc()
+   {
+      JavaEEComponent previousComponent = CurrentComponent.pop();
+      if (previousComponent != this.javaComp)
+      {
+         throw new IllegalStateException("Unexpected ENC context " + previousComponent
+               + " popped by EJB container of bean " + this.getBeanClassName());
+      }
+   }
    
    public void setJavaComp(JavaEEComponent javaeeComp)
    {
@@ -249,32 +258,46 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    /**
     * @see org.jboss.ejb3.EJBContainer#getEnc()
     */
-//   @Override
-//   public Context getEnc()
-//   {
-//      if (this.javaComp != null)
-//      {
-//         return this.javaComp.getContext();
-//      }
-//      ClassLoader cl = Thread.currentThread().getContextClassLoader();
-//      Class<?> interfaces[] = { Context.class };
-//      InvocationHandler handler = new InvocationHandler() {
-//         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
-//         {
-//            try
-//            {
-//               if(javaComp == null)
-//                  throw new IllegalStateException("java:comp is not allowed before CREATE of " + AOPBasedSingletonContainer.class.getName());
-//               return method.invoke(javaComp.getContext(), args);
-//            }
-//            catch(InvocationTargetException e)
-//            {
-//               throw e.getTargetException();
-//            }
-//         }
-//      };
-//      return (Context) Proxy.newProxyInstance(cl, interfaces, handler);
-//   }
+   @Override
+   public Context getEnc()
+   {
+      // if the java:comp is not yet setup, we return a proxy to javax.naming.Context
+      // on a call to getEnc(). This is a really brittle and tricky piece of thing.
+      // Any code which calls this method, is *not* expected to invoke 
+      // any methods on the returned proxy context, until the java:comp for this container
+      // is setup (i.e. the context is unusable until the create() of the container is called).
+      // TODO: This hack (and a similar on in org.jboss.ejb3.EJBContainer)
+      // MUST be removed once we have a better integration with naming/switchboard 
+      if (this.javaComp == null)
+      {
+         // postpone the inevitable
+         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+         Class<?> interfaces[] =
+         {Context.class};
+         InvocationHandler handler = new InvocationHandler()
+         {
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
+            {
+               try
+               {
+                  if (AOPBasedSingletonContainer.this.javaComp == null)
+                  {
+                     throw new IllegalStateException(
+                           "java:comp is not expected to be used before CREATE of EJB container. Failing bean: "
+                                 + AOPBasedSingletonContainer.this.getBeanClassName());
+                  }
+                  return method.invoke(AOPBasedSingletonContainer.this.javaComp.getContext(), args);
+               }
+               catch (InvocationTargetException e)
+               {
+                  throw e.getTargetException();
+               }
+            }
+         };
+         return (Context) Proxy.newProxyInstance(tccl, interfaces, handler);
+      }
+      return this.javaComp.getContext();
+   }
 
    /**
     * @see org.jboss.ejb3.session.SessionSpecContainer#lockedStop()
@@ -582,6 +605,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return this.getEnc();
    }
    
+
+   
    public PersistenceUnitDependencyResolver getPersistenceUnitResolver()
    {
       return this.puResolver;
@@ -784,51 +809,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return this;
    }
 
-   /**
-    * {@inheritDoc}
-    * 
-    * @throws IllegalArgumentException If the passed <code>timeoutMethodName</code> or <code>timer</code> is null
-    */
-   @Override
-   public void callTimeout(Timer timer, String timeoutMethodName, String[] timeoutMethodParams) throws Exception
-   {
-      if (timer == null)
-      {
-         throw new IllegalArgumentException("Timer instance is null on callTimeout");
-      }
-      if (timeoutMethodName == null)
-      {
-         throw new IllegalArgumentException("Timeout method name is null on callTimeout");
-      }
-      // load the method param classes
-      Class<?>[] methodParams = null;
-      if (timeoutMethodParams != null)
-      {
-         methodParams = new Class<?>[timeoutMethodParams.length];
-         int i = 0;
-         for (String param : timeoutMethodParams)
-         {
-            Class<?> methodParam = this.classloader.loadClass(param);
-            methodParams[i++] = methodParam;
-         }
-      }
-      Method autoTimeoutMethod = null;
-      try
-      {
-         // NOTE: We do *not* do any semantic validations on the timeout method. 
-         // Any relevant validations should be done outside the container during metadata
-         // creation stage.
-         autoTimeoutMethod = this.getBeanClass().getMethod(timeoutMethodName, methodParams);
-      }
-      catch (NoSuchMethodException nsme)
-      {
-         logger.error("Timeout method not found for bean " + this.getEjbName() + " for timer " + timer);
-         throw nsme;
-      }
-
-      this.callTimeout(timer, autoTimeoutMethod);
-      
-   }
    
    /**
     * Invokes the passed timeout method for the passed {@link Timer}, on a bean instance.
@@ -838,7 +818,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @throws Exception If any exception occurs during invocation of timeout method on the target bean
     * @throws {@link NullPointerException} If the passed <code>tMethod</code> is null
     */
-   private void callTimeout(Timer timer, Method tMethod) throws Exception
+   @Override
+   public void callTimeout(Timer timer, Method tMethod) throws Exception
    {
       Object[] args =
       {timer};
@@ -855,4 +836,5 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          Thread.currentThread().setContextClassLoader(oldLoader);
       }
    }
+   
 }

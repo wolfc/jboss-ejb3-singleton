@@ -21,6 +21,9 @@
 */
 package org.jboss.ejb3.singleton.aop.impl.test.container.unit;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -28,11 +31,13 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
-import org.jboss.ejb3.DefaultEjbEncFactory;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.aop.impl.test.container.InVMContainerInvocationImpl;
@@ -44,6 +49,7 @@ import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 import org.jboss.naming.JavaCompInitializer;
+import org.jboss.reloaded.naming.spi.JavaEEComponent;
 import org.jnp.server.SingletonNamingServer;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,6 +66,8 @@ public class AOPBasedSingletonContainerTestCase
 
    private Domain singletonAOPDomain;
 
+   private JavaCompInitializer javaCompInitializer;
+   
    @Before
    public void beforeTest() throws Exception
    {
@@ -82,7 +90,7 @@ public class AOPBasedSingletonContainerTestCase
    {
       SingletonNamingServer namingServer = new SingletonNamingServer();
 
-      JavaCompInitializer javaCompInitializer = new JavaCompInitializer();
+      this.javaCompInitializer = new JavaCompInitializer();
       javaCompInitializer.start();
    }
 
@@ -117,7 +125,10 @@ public class AOPBasedSingletonContainerTestCase
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
             this.singletonAOPDomain, props, sessionBeanMetaData);
-      singletonContainer.setEjbEncFactory(new DefaultEjbEncFactory());
+      // setup dummy java:/comp
+      JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
+      when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());
+      singletonContainer.setJavaComp(mockJavaEEComponent);
       
       Method getCountMethod = SimpleSingletonBean.class.getDeclaredMethod("getCount", new Class<?>[]
       {});
@@ -148,4 +159,6 @@ public class AOPBasedSingletonContainerTestCase
       count = (Integer) result;
       Assert.assertEquals("Incorrect count after incrementing", 2, count);
    }
+   
+   
 }

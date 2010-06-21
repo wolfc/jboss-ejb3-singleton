@@ -26,10 +26,10 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.4.1</version.ejb3.core>
+	    <version.ejb3.core>1.4.2-SNAPSHOT</version.ejb3.core>
         <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
         <version.reloaded.naming>0.1.0</version.reloaded.naming>
-        <version.timerservice.spi>1.0.1</version.timerservice.spi>        
+        <version.timerservice.spi>1.0.2-SNAPSHOT</version.timerservice.spi>        
     </properties>
     
     <build>
@@ -137,7 +137,13 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>
-        
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>1.8.4</version>
+			<scope>test</scope>
+		</dependency>
         
         
         <!-- this needs to be removed - EJBTHREE-1343 -->
