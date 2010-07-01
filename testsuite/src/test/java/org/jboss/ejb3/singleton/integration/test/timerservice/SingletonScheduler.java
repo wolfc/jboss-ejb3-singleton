@@ -34,6 +34,7 @@ import javax.ejb.TimerService;
 
 import org.jboss.ejb3.annotation.RemoteBinding;
 import org.jboss.ejb3.singleton.integration.test.timerservice.unit.SingletonBeanTimerServiceTestCase;
+import org.jboss.logging.Logger;
 
 /**
  * Used in {@link SingletonBeanTimerServiceTestCase}
@@ -47,6 +48,8 @@ import org.jboss.ejb3.singleton.integration.test.timerservice.unit.SingletonBean
 public class SingletonScheduler implements Scheduler
 {
 
+   private static Logger logger = Logger.getLogger(SingletonScheduler.class);
+   
    public static final String JNDI_NAME = "TimerTestSingletonBean";
    
    private ScheduleTracker scheduleTracker = new ScheduleTracker();
@@ -75,14 +78,17 @@ public class SingletonScheduler implements Scheduler
    @Lock (LockType.WRITE)
    public void timeout(Timer timer)
    {
+      logger.info("Received timeout at: " + new Date() + " for timer " + timer);
       // record the timeout
       this.scheduleTracker.trackTimeout(timer);
       // see if the max number of timeouts has reached. If yes, then
       // cancel any further timeouts
       int timeoutCount = this.scheduleTracker.getTimeoutCount();
+      logger.info("Total timeouts so far: " + timeoutCount + " Max allowed " + maxTimeouts);
       if (timeoutCount == maxTimeouts)
       {
          timer.cancel();
+         logger.info("Cancelled timer: " + timer);
       }
    }
    

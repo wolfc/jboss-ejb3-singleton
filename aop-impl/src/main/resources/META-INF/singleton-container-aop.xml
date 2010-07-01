@@ -25,7 +25,7 @@
       </bind>
       <bind pointcut="execution(public * *->*(..))">
          <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/> 
-         <interceptor-ref name="org.jboss.ejb3.tx.CMTTxInterceptorFactory"/>
+         <interceptor-ref name="CMTTx"/>
          <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
          <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
          <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
