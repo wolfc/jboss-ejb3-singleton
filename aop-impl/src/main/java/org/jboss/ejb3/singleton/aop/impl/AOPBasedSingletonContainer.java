@@ -37,6 +37,7 @@ import javax.naming.Context;
 import org.jboss.aop.Advisor;
 import org.jboss.aop.Domain;
 import org.jboss.aop.MethodInfo;
+import org.jboss.aop.advice.Interceptor;
 import org.jboss.aop.joinpoint.Invocation;
 import org.jboss.aop.joinpoint.InvocationResponse;
 import org.jboss.aop.joinpoint.MethodInvocation;
@@ -45,7 +46,6 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Container;
 import org.jboss.ejb3.DependencyPolicy;
-import org.jboss.ejb3.EjbEncFactory;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.common.resolvers.spi.EjbReference;
@@ -95,6 +95,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * Logger
     */
    private static Logger logger = Logger.getLogger(AOPBasedSingletonContainer.class);
+   
+   private static final String SINGLETON_BEAN_TIMEOUT_METHOD_AOP_INTERCEPTOR_STACK_NAME = "SingletonBeanTimeoutMethodStack";
 
    /**
     * This is the container to which the {@link AOPBasedSingletonContainer} will
@@ -423,18 +425,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       // create a container invocation
       ContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo, args);
 
-      try
-      {
-         // TODO: Legacy push/pop copied from StatelessContainer/SessionSpecContainer
-      //   SessionSpecContainer.invokedMethod.push(serializableMethod);
-         // pass the control to the simple singleton container
-         return this.delegate.invoke(containerInvocation);
-
-      }
-      finally
-      {
-       //  SessionSpecContainer.invokedMethod.pop();
-      }
+      // pass the control to the simple singleton container
+      return this.delegate.invoke(containerInvocation);
 
    }
 
@@ -828,8 +820,28 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
       try
       {
-         // invoke
-         this.invoke((Serializable) null, (Class<?>) null, tMethod, args);
+         // create a (AOP) MethodInfo first so that a AOP based container invocation can be created out of it
+         long hash = MethodHashing.calculateHash(tMethod);
+         MethodInfo methodInfo = getAdvisor().getMethodInfo(hash);
+         if (methodInfo == null)
+         {
+            throw new RuntimeException("MethodInfo not found for timeout method " + tMethod.toString()
+                  + ", probable error in virtual method registration w/ Advisor for the Container of bean " + this.getEjbName());
+         }
+         // get hold of the unadvised method, so that we can mark it accessible
+         // for the duration of this call (Remember, timeout methods can be with private, protected, package access modifier)
+         Method unadvisedMethod = methodInfo.getUnadvisedMethod();
+         // mark as accessible before invoking
+         unadvisedMethod.setAccessible(true);
+         // the timeout method (even if private, protected etc...) should pass through the AOP interceptor
+         // chain. Hence we have a specific AOP interceptor stack for timeout method. Get hold of those interceptors
+         Interceptor[] timeoutMethodAOPInterceptors = this.getInterceptors(methodInfo.getJoinpoint(),SINGLETON_BEAN_TIMEOUT_METHOD_AOP_INTERCEPTOR_STACK_NAME);
+         // create a container invocation
+         ContainerInvocation containerInvocation = new AOPBasedContainerInvocation(methodInfo, args, null, timeoutMethodAOPInterceptors);
+
+         // pass the control to the simple singleton container
+         this.delegate.invoke(containerInvocation);
+
       }
       finally
       {

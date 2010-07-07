@@ -92,6 +92,24 @@
          <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> -->
          <stack-ref name="EJBInterceptors"/>
       </bind>
+      
+        <stack name="SingletonBeanTimeoutMethodStack">
+
+            <!--  Include the common timeout method stack
+                After JBAS-8130, just use this stack-ref and remove the 4 duplicate listed interceptor-refs
+                below 
+            <stack-ref name="TimeoutMethodStack"/> -->
+            
+            <interceptor-ref name="org.jboss.ejb3.interceptor.EJB3TCCLInterceptor"/>
+            <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
+            <interceptor-ref name="CurrentInvocationContextInterceptor"/>
+            <interceptor-ref name="org.jboss.ejb3.BlockContainerShutdownInterceptor"/>
+            
+            <!--  The additional Singleton bean specific ones -->
+            <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
+            <stack-ref name="EJBInterceptors"/>
+        </stack>
+            
    </domain>
 
 </aop>

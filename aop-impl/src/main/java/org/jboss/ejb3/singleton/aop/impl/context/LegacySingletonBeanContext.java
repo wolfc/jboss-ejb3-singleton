@@ -25,9 +25,12 @@ import java.io.Serializable;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.context.base.BaseSessionInvocationContext;
 import org.jboss.ejb3.context.spi.EJBContext;
+import org.jboss.ejb3.context.spi.SessionInvocationContext;
 import org.jboss.ejb3.session.SessionSpecBeanContext;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
+import org.jboss.ejb3.timerservice.spi.TimerServiceInvocationContext;
 import org.jboss.logging.Logger;
 
 /**
@@ -101,4 +104,33 @@ public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedS
       return null;
    }
    
+   @Override
+   public SessionInvocationContext createLifecycleInvocation()
+   {
+      return new SingletonBeanLifecylceInvocationContext();
+   }
+   
+   private class SingletonBeanLifecylceInvocationContext extends BaseSessionInvocationContext implements TimerServiceInvocationContext
+   {
+
+      public SingletonBeanLifecylceInvocationContext()
+      {
+         super(null, null, null);
+         // TODO Auto-generated constructor stub
+      }
+
+      @Override
+      public Object proceed() throws Exception
+      {
+         // TODO Auto-generated method stub
+         return null;
+      }
+
+      @Override
+      public boolean isSingleton()
+      {
+         return true;
+      }
+      
+   }
 }

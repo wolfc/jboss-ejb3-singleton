@@ -24,6 +24,7 @@ package org.jboss.ejb3.singleton.aop.impl;
 import java.util.List;
 
 import org.jboss.aop.MethodInfo;
+import org.jboss.aop.advice.Interceptor;
 import org.jboss.ejb3.EJBContainerInvocation;
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
@@ -92,9 +93,10 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       AOPBasedContainerInvocation aopInvocationContext = (AOPBasedContainerInvocation) containerInvocation;
       // form a AOP invocation
       MethodInfo methodInfo = aopInvocationContext.getMethodInfo();
+      Interceptor[] aopInterceptors = aopInvocationContext.getInterceptors();
 
       EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext> invocation = new SessionContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext>(
-            containerInvocation.getInvokedBusinessInterface(), aopInvocationContext.getMethodInfo());
+            containerInvocation.getInvokedBusinessInterface(), aopInvocationContext.getMethodInfo(), aopInterceptors);
       invocation.setAdvisor(methodInfo.getAdvisor());
       invocation.setArguments(containerInvocation.getArgs());
       // set the target bean context of the AOP invocation

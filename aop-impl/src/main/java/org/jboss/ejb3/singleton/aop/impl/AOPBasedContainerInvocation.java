@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.jboss.aop.MethodInfo;
+import org.jboss.aop.advice.Interceptor;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 
 /**
@@ -58,6 +59,8 @@ public class AOPBasedContainerInvocation implements ContainerInvocation
     */
    private Class<?> businessInterface;
 
+   private Interceptor[] overridenAOPInterceptors;
+   
    /**
     * Response context (legacy AOP stuff), used to pass around
     * the response
@@ -91,6 +94,20 @@ public class AOPBasedContainerInvocation implements ContainerInvocation
    {
       this(aopMethodInfo, args);
       this.businessInterface = businessInterface;
+   }
+   
+   /**
+    * Constructs a {@link AOPBasedContainerInvocation}
+    * 
+    * @param method The AOP method
+    * @param args Arguments to the method
+    * @param businessInterface The business interface on which the method was invoked
+    * @param interceptors
+    */
+   public AOPBasedContainerInvocation(MethodInfo aopMethodInfo, Object[] args, Class<?> businessInterface, Interceptor[] interceptors)
+   {
+      this(aopMethodInfo, args, businessInterface);
+      this.overridenAOPInterceptors = interceptors;
    }
 
    /**
@@ -159,5 +176,14 @@ public class AOPBasedContainerInvocation implements ContainerInvocation
    {
       // TODO Auto-generated method stub
       return null;
+   }
+   
+   public Interceptor[] getInterceptors()
+   {
+      if (this.overridenAOPInterceptors == null)
+      {
+         return this.aopMethodInfo.getInterceptors();
+      }
+      return this.overridenAOPInterceptors;
    }
 }
