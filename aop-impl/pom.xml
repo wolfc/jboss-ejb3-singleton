@@ -26,7 +26,7 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.5.0-SNAPSHOT</version.ejb3.core>
+	    <version.ejb3.core>1.5.0-alpha-2</version.ejb3.core>
         <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
         <version.reloaded.naming>0.1.0</version.reloaded.naming>
         <version.timerservice.spi>1.0.3</version.timerservice.spi>        
