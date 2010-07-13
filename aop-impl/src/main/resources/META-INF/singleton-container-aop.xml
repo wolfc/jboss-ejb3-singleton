@@ -53,7 +53,17 @@
             <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
             <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
             <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
-            <stack-ref name="EJBInterceptors"/>
+            <!-- Uncomment the following EJBInterceptors and comment out from org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory to
+             org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor once, JBAS-8130 is fixed
+            <stack-ref name="EJBInterceptors"/> -->
+            
+            <interceptor-ref name="org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory"/>
+            <advice name="setup" aspect="InvocationContextInterceptor"/>
+            <advice name="fillMethod" aspect="InvocationContextInterceptor"/>
+            <advice name="aroundInvoke" aspect="InjectInterceptorsFactory"/>
+            <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor" />
+            
+            
             <!-- container concurrency management -->
             <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
       </stack>
