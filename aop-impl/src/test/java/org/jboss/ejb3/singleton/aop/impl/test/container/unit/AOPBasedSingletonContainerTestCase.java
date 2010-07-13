@@ -30,6 +30,9 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -124,7 +127,7 @@ public class AOPBasedSingletonContainerTestCase
       sessionBeanMetaData.setContainerName(containerName);
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
-            this.singletonAOPDomain, props, sessionBeanMetaData);
+            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool());
       // setup dummy java:/comp
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
       when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());

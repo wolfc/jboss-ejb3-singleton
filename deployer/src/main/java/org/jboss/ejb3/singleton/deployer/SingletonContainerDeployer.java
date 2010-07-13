@@ -27,6 +27,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
@@ -155,6 +156,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // new SPI based EJB3Deployment
       //addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
+      addInput(org.jboss.ejb3.async.spi.AttachmentNames.ASYNC_INVOCATION_PROCESSOR);
    }
 
    /**
@@ -174,6 +176,11 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          return;
       }
 
+      ExecutorService asyncExecutorService = (ExecutorService) unit.getAttachment(org.jboss.ejb3.async.spi.AttachmentNames.ASYNC_INVOCATION_PROCESSOR);
+      if (asyncExecutorService == null)
+      {
+         throw new IllegalStateException("No async executor available for deployment unit " + unit);
+      }
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
 
@@ -191,7 +198,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       try
       {
          singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean
-               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit);
+               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit, asyncExecutorService);
       }
       catch (ClassNotFoundException cnfe)
       {

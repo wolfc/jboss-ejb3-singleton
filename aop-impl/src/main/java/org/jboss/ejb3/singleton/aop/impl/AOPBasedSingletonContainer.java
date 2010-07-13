@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import javax.ejb.EJBException;
 import javax.ejb.Handle;
@@ -143,18 +144,18 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @throws ClassNotFoundException
     */
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du)
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du, ExecutorService asyncExecutorService)
          throws ClassNotFoundException
    {
-      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData);
+      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       this.deploymentUnit = du;
 
    }
 
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData) throws ClassNotFoundException
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService) throws ClassNotFoundException
    {
-      super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData);
+      super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       // HACK
       this.dependencyPolicy = new JBoss5DependencyPolicy(this);
       // create a AOP based interceptor registry which will be used by the container
@@ -847,6 +848,15 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       {
          Thread.currentThread().setContextClassLoader(oldLoader);
       }
+   }
+   
+   // TODO: We don't do anything special here, except for making it
+   // package protected for use in AOPBasedInterceptorRegistry. This
+   // needs a revisit.
+   @Override
+   protected ExecutorService getAsynchronousExecutor()
+   {
+      return super.getAsynchronousExecutor();
    }
    
 }
