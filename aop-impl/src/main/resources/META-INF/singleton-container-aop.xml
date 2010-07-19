@@ -8,6 +8,7 @@
       <interceptor-ref name="org.jboss.ejb3.remoting.IsLocalInterceptor"/>
       <interceptor-ref name="org.jboss.ejb3.security.client.SecurityClientInterceptor"/>
       <interceptor-ref name="org.jboss.aspects.tx.ClientTxPropagationInterceptor"/>
+      <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor" />      
       <interceptor-ref name="org.jboss.aspects.remoting.InvokeRemoteInterceptor"/>
     </stack>
     
@@ -58,10 +59,10 @@
             <stack-ref name="EJBInterceptors"/> -->
             
             <interceptor-ref name="org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory"/>
+            <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.FutureSerializingInterceptor" />
             <advice name="setup" aspect="InvocationContextInterceptor"/>
             <advice name="fillMethod" aspect="InvocationContextInterceptor"/>
             <advice name="aroundInvoke" aspect="InjectInterceptorsFactory"/>
-            <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor" />
             
             
             <!-- container concurrency management -->
