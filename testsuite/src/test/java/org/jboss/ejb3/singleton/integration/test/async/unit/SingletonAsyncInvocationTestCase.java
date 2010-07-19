@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * SingletonAsyncInvocationTestCase
+ * Tests asynchronous method invocations on methods in a singleton bean
  *
  * @author Jaikiran Pai
  * @version $Revision: $
@@ -71,14 +71,25 @@ public class SingletonAsyncInvocationTestCase extends AbstractSingletonTestCase
          this.undeploy(deployment);
       }
    }
-   
+
+   /**
+    * Tests a simple invocation on an asynchronous method of a singleton bean
+    * 
+    * @throws Throwable
+    */
    @Test
    public void testSimpleAsyncInvocationOnSingletonBean() throws Throwable
    {
       AsyncOps asyncOps = (AsyncOps) this.getInitialContext().lookup(AsyncSingleton.JNDI_NAME);
       String message = "Hello, it's urgent! Please reply";
       Future<String> futureReply = asyncOps.delayedEcho(message);
-      
+
+      // make sure the bean invocation didn't return synchronously (we have a 2 second sleep in the bean method,
+      // so a Future.isDone() invocation should return false)
+      boolean wasDoneImmidiately = futureReply.isDone();
+      Assert.assertFalse("Bean invocation returned immidiately, probably wasn't invoked asynchronously",
+            wasDoneImmidiately);
+
       try
       {
          // wait for a few seconds to get the reply
@@ -94,15 +105,27 @@ public class SingletonAsyncInvocationTestCase extends AbstractSingletonTestCase
       {
          throw new RuntimeException("Timed-out waiting for a reply from async method on singleton bean", te);
       }
-      
+
    }
-   
+
+   /**
+    * Tests that a method marked as asynchronous, on a singleton bean, can properly lookup and/or make use
+    * of injected timerservice
+    * 
+    * @throws Throwable
+    */
    @Test
    public void testTimerServiceLookupInAsyncMethodOfSingletonBean() throws Throwable
    {
       AsyncOps asyncOps = (AsyncOps) this.getInitialContext().lookup(AsyncSingleton.JNDI_NAME);
-      
+
       Future<Boolean> futureReply = asyncOps.lookupTimerService();
+
+      // make sure the bean invocation didn't return synchronously (we have a 2 second sleep in the bean method,
+      // so a Future.isDone() invocation should return false)
+      boolean wasDoneImmidiately = futureReply.isDone();
+      Assert.assertFalse("Bean invocation returned immidiately, probably wasn't invoked asynchronously",
+            wasDoneImmidiately);
       
       try
       {

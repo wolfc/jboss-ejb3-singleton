@@ -25,6 +25,7 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Resource;
 import javax.ejb.AsyncResult;
+import javax.ejb.Asynchronous;
 import javax.ejb.Remote;
 import javax.ejb.Singleton;
 import javax.ejb.TimerService;
@@ -59,26 +60,22 @@ public class AsyncSingleton implements AsyncOps
    private TimerService timerServiceInjectedAtCustomENCName;
 
    @Override
+   @Asynchronous
    public Future<String> delayedEcho(String msg)
    {
-      // let's go to sleep, since we are too lazy to just send back an echo
-      long sleepTime = 2000;
-      logger.info("Sleeping for " + sleepTime + " milli. sec");
-      try
-      {
-         Thread.sleep(sleepTime);
-      }
-      catch (InterruptedException e)
-      {
-         // ignore
-      }
+      // sleep for 2 sec      
+      this.sleepFor2Sec();
 
       return new AsyncResult<String>(msg);
    }
 
    @Override
+   @Asynchronous
    public Future<Boolean> lookupTimerService()
    {
+      // sleep for 2 sec
+      this.sleepFor2Sec();
+      
       StringBuilder exceptionMessage = new StringBuilder("");
       if (this.injectedTimerService == null)
       {
@@ -159,6 +156,21 @@ public class AsyncSingleton implements AsyncOps
       catch (NamingException e)
       {
          throw new RuntimeException(e);
+      }
+   }
+   
+   private void sleepFor2Sec()
+   {
+      // let's go to sleep, since we are too lazy to just send back an echo
+      long sleepTime = 2000;
+      logger.info("Sleeping for " + sleepTime + " milli. sec");
+      try
+      {
+         Thread.sleep(sleepTime);
+      }
+      catch (InterruptedException e)
+      {
+         // ignore
       }
    }
 }
