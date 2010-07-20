@@ -24,18 +24,12 @@ package org.jboss.ejb3.singleton.integration.test.async.unit;
 import java.util.concurrent.Future;
 
 /**
- * AsyncOps
+ * ThreadTracker
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public interface AsyncOps
+public interface ThreadTracker
 {
-
-   Future<String> delayedEcho(String msg);
-   
-   Future<Boolean> lookupTimerService();
-   
-   void callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton();
-
+   public Future<Thread> getThreadOfExecution();
 }

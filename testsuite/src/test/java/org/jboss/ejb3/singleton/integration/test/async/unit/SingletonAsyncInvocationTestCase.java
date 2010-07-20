@@ -143,4 +143,22 @@ public class SingletonAsyncInvocationTestCase extends AbstractSingletonTestCase
          throw new RuntimeException("Timed-out waiting for a reply from async method on singleton bean", te);
       }
    }
+   
+   /**
+    * Tests that the invocation on an asynchronous method of a singleton bean, through it's local business interface
+    * works as expected.
+    * 
+    * @throws Exception
+    */
+   @Test
+   public void testAsyncInvocationThroughLocalBusinessInterfaceOfSingletonBean() throws Exception
+   {
+      AsyncOps asyncOps = (AsyncOps) this.getInitialContext().lookup(AsyncSingleton.JNDI_NAME);
+      // The AsyncSingleton.callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton is *synchronous*.
+      // However, it internally invokes a asynchronous method on the local  business interface of a different bean.
+      // The various checks involved in verifying that the asynchronous invocation was done successfully,
+      // are handled in the AsyncSingleton.callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton(). If unsuccessful,
+      // the AsyncSingleton.callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton() throws a RuntimeException
+      asyncOps.callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton();
+   }
 }

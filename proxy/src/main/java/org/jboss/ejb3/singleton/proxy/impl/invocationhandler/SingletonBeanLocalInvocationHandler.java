@@ -21,6 +21,7 @@
 */
 package org.jboss.ejb3.singleton.proxy.impl.invocationhandler;
 
+import org.jboss.aop.advice.Interceptor;
 import org.jboss.ejb3.proxy.impl.handler.session.SessionLocalProxyInvocationHandler;
 
 /**
@@ -42,6 +43,7 @@ public class SingletonBeanLocalInvocationHandler extends SessionLocalProxyInvoca
     * Constructs a {@link SingletonBeanLocalInvocationHandler} for a registered container
     * 
     * @param containerRegistryName The name by which the container is registered
+    * @param containerGUID The globally unique id of the container
     */
    public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID)
    {
@@ -53,11 +55,41 @@ public class SingletonBeanLocalInvocationHandler extends SessionLocalProxyInvoca
     * business interface
     * 
     * @param containerRegistryName The name by which the container is registered
+    * @param containerGUID The globally unique id of the container
     * @param businessInterface The business interface on which the invocation is being made
     */
    public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID, String businessInterfaceType)
    {
       super(containerRegistryName, containerGUID, null, businessInterfaceType);
+   }
+   
+   
+   /**
+    * Constructs a {@link SingletonBeanLocalInvocationHandler} for a registered container
+    * 
+    * @param containerRegistryName The name by which the container is registered
+    * @param containerGUID The globally unique id of the container
+    * @param clientInterceptors The client side AOP interceptors that will be used when this 
+    *                           {@link SingletonBeanLocalInvocationHandler} is invoked. This can be null 
+    */
+   public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID, Interceptor[] clientInterceptors)
+   {
+      super(containerRegistryName, containerGUID, clientInterceptors);
+   }
+
+   /**
+    * Constructs a {@link SingletonBeanLocalInvocationHandler} for a registered container and a 
+    * business interface
+    * 
+    * @param containerRegistryName The name by which the container is registered
+    * @param containerGUID The globally unique id of the container
+    * @param businessInterface The business interface on which the invocation is being made
+    * @param clientInterceptors The client side AOP interceptors that will be used when this 
+    *                           {@link SingletonBeanLocalInvocationHandler} is invoked. This can be null
+    */
+   public SingletonBeanLocalInvocationHandler(String containerRegistryName, String containerGUID, String businessInterfaceType, Interceptor[] interceptors)
+   {
+      super(containerRegistryName, containerGUID, interceptors, businessInterfaceType);
    }
 
    

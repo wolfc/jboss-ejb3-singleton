@@ -75,7 +75,17 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          DeploymentVisitor<EJBContainer>
 {
 
-   private final static String CLIENT_INTERCEPTOR_STACK_NAME = "SingletonSessionClientInterceptors";
+   /**
+    * Client side AOP interceptors for the remote business interface(s) of the singleton bean
+    */
+   private final static String REMOTE_CLIENT_INTERCEPTOR_STACK_NAME = "SingletonSessionClientInterceptors";
+   
+   /**
+    * Client side AOP interceptors for the local business interface(s) of the singleton bean
+    */
+   private static final String LOCAL_CLIENT_INTERCEPTOR_STACK_NAME = "LocalClientInterceptors";
+   
+
 
    private static Logger logger = Logger.getLogger(SingletonBeanJNDIBinderDeployer.class);
    
@@ -194,7 +204,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       }
 
       ProxyFactory proxyFactory = new ReflectProxyFactory();
-      Interceptor[] clientInterceptors = this.getClientInterceptors(container);
+      Interceptor[] clientInterceptors = this.getRemoteClientInterceptors(container);
 
       Set<Class<?>> allRemoteinterfaces = new HashSet<Class<?>>();
       for (String businessRemote : businessRemotes)
@@ -309,6 +319,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          throw new RuntimeException("Could not create jndi context for jndi binders", ne);
       }
       Set<Class<?>> allLocalinterfaces = new HashSet<Class<?>>();
+      // get the client side AOP interceptor(s) for local business interface of the singleton bean 
+      Interceptor[] clientInterceptors = this.getLocalClientInterceptors(container);
+
       for (String businessLocal : businessLocals)
       {
          Class<?> businessLocalIntf = null;
@@ -323,7 +336,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          allLocalinterfaces.add(businessLocalIntf);
 
          InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey,
-               businessLocal);
+               businessLocal, clientInterceptors);
 
          // time to create a proxy
          Object proxy = proxyFactory.createProxy(new Class<?>[]
@@ -344,7 +357,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       List<LocalBindingMetaData> localBindings = sessionBean.getLocalBindings();
       if (localBindings == null || localBindings.isEmpty())
       {
-         InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID);
+         InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID, clientInterceptors);
          String defaultBusinessLocalJNDIName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
          Object proxy = proxyFactory.createProxy(allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]),
                invocationHandler);
@@ -364,7 +377,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             {
                jndiName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
             }
-            InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID);
+            InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID, clientInterceptors);
             Object proxy = proxyFactory.createProxy(
                   allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]), invocationHandler);
             JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
@@ -433,23 +446,47 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
    }
 
    /**
-    * Returns the client side interceptors for the container
+    * Returns the client side interceptors for the remote business interface of the bean
+    * represented by the <code>container</code>
     * 
-    * @param container
+    * @param container The {@link EJBContainer}
     * @return
     */
-   private Interceptor[] getClientInterceptors(EJBContainer container)
+   private Interceptor[] getRemoteClientInterceptors(EJBContainer container)
    {
       // Obtain interceptors by stack name via Aspect Manager
       AspectManager manager = AspectManager.instance();
-      AdviceStack stack = manager.getAdviceStack(CLIENT_INTERCEPTOR_STACK_NAME);
+      AdviceStack stack = manager.getAdviceStack(REMOTE_CLIENT_INTERCEPTOR_STACK_NAME);
 
       if (stack == null)
       {
-         throw new RuntimeException("Could not find Advice Stack with name: " + CLIENT_INTERCEPTOR_STACK_NAME);
+         throw new RuntimeException("Could not find Advice Stack with name: " + REMOTE_CLIENT_INTERCEPTOR_STACK_NAME);
       }
       Interceptor[] interceptors = stack.createInterceptors(container.getAdvisor(), null);
       return interceptors;
    }
+   
+   
+   /**
+    * Returns the client side interceptors for the local business interface of the bean
+    * represented by the <code>container</code>
+    * 
+    * @param container The {@link EJBContainer}
+    * @return
+    */
+   private Interceptor[] getLocalClientInterceptors(EJBContainer container)
+   {
+      // Obtain interceptors by stack name via Aspect Manager
+      AspectManager manager = AspectManager.instance();
+      AdviceStack stack = manager.getAdviceStack(LOCAL_CLIENT_INTERCEPTOR_STACK_NAME);
+
+      if (stack == null)
+      {
+         throw new RuntimeException("Could not find Advice Stack with name: " + LOCAL_CLIENT_INTERCEPTOR_STACK_NAME);
+      }
+      Interceptor[] interceptors = stack.createInterceptors(container.getAdvisor(), null);
+      return interceptors;
+   }
+
 
 }

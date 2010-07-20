@@ -23,19 +23,51 @@ package org.jboss.ejb3.singleton.integration.test.async.unit;
 
 import java.util.concurrent.Future;
 
+import javax.ejb.AsyncResult;
+import javax.ejb.Asynchronous;
+import javax.ejb.Local;
+import javax.ejb.Singleton;
+
+import org.jboss.ejb3.annotation.LocalBinding;
+import org.jboss.logging.Logger;
+
 /**
- * AsyncOps
+ * SlowEchoBean
  *
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public interface AsyncOps
+@Singleton
+@Local(ThreadTracker.class)
+public class ThreadTrackingSlowBean implements ThreadTracker
 {
 
-   Future<String> delayedEcho(String msg);
-   
-   Future<Boolean> lookupTimerService();
-   
-   void callAsynchronousMethodOnLocalBusinessInterfaceOfSingleton();
+   private static Logger logger = Logger.getLogger(ThreadTrackingSlowBean.class);
 
+   /**
+    * A {@link Asynchronous} method which returns the current thread of execution. Sleep for a few seconds, before
+    * returning the result
+    */
+   @Asynchronous
+   public Future<Thread> getThreadOfExecution()
+   {
+      this.sleepFor5Sec();
+
+      return new AsyncResult<Thread>(Thread.currentThread());
+   }
+
+   private void sleepFor5Sec()
+   {
+      // let's go to sleep
+      long sleepTime = 5000;
+      logger.info("Sleeping for " + sleepTime + " milli. sec");
+      try
+      {
+         Thread.sleep(sleepTime);
+      }
+      catch (InterruptedException e)
+      {
+         // ignore
+      }
+   }
 }
