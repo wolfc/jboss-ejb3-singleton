@@ -67,7 +67,7 @@
         <dependency>
             <groupId>org.jboss.ejb3</groupId>
             <artifactId>jboss-ejb3-proxy-impl</artifactId>
-            <version>1.0.10-SNAPSHOT</version>
+            <version>1.0.10</version>
             
             <exclusions>
                 <exclusion>
