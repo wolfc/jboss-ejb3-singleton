@@ -227,20 +227,37 @@
                         </configuration>
                     </execution> 
                     
-                    <execution>
-                        <id>run-tests</id>
-                        <phase>integration-test</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <tasks>
-                                <ant antfile="${project.build.directory}/test-classes/test.xml" target="tests" inheritRefs="true" inheritAll="true"/>
-                            </tasks>
-                        </configuration>
-                        
-                    </execution>
+					<execution>
+						<id>run-tests</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks unless="test">
+								<ant antfile="${project.build.directory}/test-classes/test.xml"
+									target="tests" inheritRefs="true" inheritAll="true" />
+							</tasks>
+						</configuration>
+
+					</execution>
+					<execution>
+						<id>run-one-test</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks if="test">
+								<ant antfile="${project.build.directory}/test-classes/test.xml"
+									target="one-test" inheritRefs="true" inheritAll="true" />
+							</tasks>
+
+						</configuration>
+
+					</execution>
                 </executions> 
+                
                 <dependencies>
                     <dependency>
                      <groupId>org.apache.ant</groupId>
@@ -280,9 +297,9 @@
                                 <jvmArg>-Djava.net.preferIPv4Stack=true</jvmArg>
                                 <!-- Temporary, till AS boots without this property JBAS-6744 -->
                                 <jvmArg>-Dxb.builder.useUnorderedSequence=true</jvmArg>
-                                <!--  Uncomment to add debug JVM params
+                                <!--  Uncomment to add debug JVM params -->
                                 <jvmArg>-Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n</jvmArg>
-                                -->
+                                
                             </jvmArgs>
                             <jboss.test.run>true</jboss.test.run>
                         </configuration>

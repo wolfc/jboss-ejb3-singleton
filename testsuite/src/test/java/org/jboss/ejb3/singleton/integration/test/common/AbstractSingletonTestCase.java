@@ -184,6 +184,22 @@ public abstract class AbstractSingletonTestCase
       }
       return writeToFileSystem(jar);
    }
+   
+   /**
+    * Creates a jar file with the name <code>jarName</code> including in that jar, the 
+    * <code>testArtifactClasses</code>.
+    * 
+    * @param jarName Name of the jar file (including the .jar extension)
+    * @param testArtifactClasses The test classes
+    * @return Returns the created jar file 
+    * @throws IOException
+    */
+   protected static File buildSimpleJar(String jarName, Class<?>... testArtifactClasses) throws IOException
+   {
+      JavaArchive jar = Archives.create(jarName, JavaArchive.class);
+      jar.addClasses(testArtifactClasses);
+      return writeToFileSystem(jar);
+   }
 
    /**
     * Creates a ear file with the name <code>earName</code>. The .ear will include the

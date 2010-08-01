@@ -22,10 +22,8 @@
 package org.jboss.ejb3.singleton.deployer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -43,9 +41,7 @@ import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
 import org.jboss.deployers.structure.spi.DeploymentUnit;
-import org.jboss.ejb3.Container;
 import org.jboss.ejb3.DependencyPolicy;
-import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
@@ -117,17 +113,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * component informer
     */
    private JavaEEComponentInformer javaeeComponentInformer;
-
-   /**
-    * Stores the reference of singleton containers which have been deployed, by this deployer.
-    * <p>
-    *   This information will be used during undeployment of the deployment unit
-    * </p>
-    * <p>
-    *   The key of this {@link Map} is the name of the container and the value is the container itself.
-    * </p>
-    */
-   protected Map<String, Container> singletonContainers = new HashMap<String, Container>();
 
    /**
     * Constructs a {@link SingletonContainerDeployer} for
@@ -212,9 +197,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.instantiated();
 
       singletonContainer.processMetadata();
-      // register the container with Ejb3Registry and also store reference locally (for use during
-      // undeploy)
-      this.registerContainer(sessionBean.getContainerName(), singletonContainer);
 
       // attach the container to the deployment unit, with appropriate MC dependencies
       this.installContainer(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
@@ -227,12 +209,8 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    @Override
    public void undeploy(DeploymentUnit unit, JBossEnterpriseBeanMetaData enterpriseBean)
    {
-      if (isSingletonBean(enterpriseBean))
-      {
-         String containerName = enterpriseBean.getContainerName();
-         this.unregisterContainer(containerName);
-
-      }
+      // nothing to do since the deploy() actually attaches MC beans, to the unit,
+      // which will have their own lifecycle methods
    }
 
    /** 
@@ -295,39 +273,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       }
       // it's a singleton bean
       return true;
-   }
-
-   /**
-    * Register the container with the {@link Ejb3Registry} and also store a reference to the container
-    * locally in {@link #singletonContainers}
-    * 
-    * @param containerName The container name which will be used to store the container in {@link #singletonContainers}.
-    *                       Should *not* be null
-    * @param container The container being registered. Should *not* be null
-    */
-   private void registerContainer(String containerName, Container container)
-   {
-      // org.jboss.ejb3.remoting.IsLocalInterceptor requires the container to be registered with Ejb3Registry
-      Ejb3Registry.register(container);
-      // we need to cleanup in undeploy(), so keep an reference of containers which we registered
-      this.singletonContainers.put(containerName, container);
-   }
-
-   /**
-    * Unregisters the container with name <code>containerName</code>, from the
-    * {@link Ejb3Registry} as well as removes the reference from {@link #singletonContainers}
-    * 
-    * @param containerName The name of the container
-    */
-   private void unregisterContainer(String containerName)
-   {
-      // remove (any) locally stored reference to container
-      Container container = this.singletonContainers.remove(containerName);
-      // unregister from Ejb3Registry
-      if (container != null)
-      {
-         Ejb3Registry.unregister(container);
-      }
    }
 
    /**

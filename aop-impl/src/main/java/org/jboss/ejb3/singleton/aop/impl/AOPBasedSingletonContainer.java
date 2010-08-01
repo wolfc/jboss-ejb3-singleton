@@ -47,6 +47,7 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.BeanContext;
 import org.jboss.ejb3.Container;
 import org.jboss.ejb3.DependencyPolicy;
+import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
 import org.jboss.ejb3.common.resolvers.spi.EjbReference;
@@ -198,6 +199,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       super.create();
       this.delegate.create();
+      
    }
 
    /**
@@ -207,6 +209,10 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected void lockedStart() throws Exception
    {
       super.lockedStart();
+
+      // org.jboss.ejb3.remoting.IsLocalInterceptor requires the container to be registered with Ejb3Registry
+      Ejb3Registry.register(this);
+
       // pass on the control to our simple singleton container
       this.delegate.start();
    }
@@ -309,6 +315,11 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected void lockedStop() throws Exception
    {
       this.delegate.stop();
+      if (Ejb3Registry.hasContainer(this))
+      {
+         Ejb3Registry.unregister(this);
+      }
+
       super.lockedStop();
    }
 
@@ -319,6 +330,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public void destroy() throws Exception
    {
       this.delegate.destroy();
+      
       // let the super do the rest
       super.destroy();
    }
