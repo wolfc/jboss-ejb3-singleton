@@ -23,10 +23,6 @@ package org.jboss.ejb3.singleton.integration.test.redeploy.unit;
 
 import java.io.File;
 
-import javax.naming.NameNotFoundException;
-
-import junit.framework.Assert;
-
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.ejb3.singleton.integration.test.common.AbstractSingletonTestCase;
 import org.jboss.ejb3.singleton.integration.test.redeploy.BrokenSingleton;
@@ -36,7 +32,15 @@ import org.jboss.logging.Logger;
 import org.junit.Test;
 
 /**
- * BrokenSingletonRedeploymentTestCase
+ * Tests that a previously failed singleton bean deployment, deploys successfully on a redeploy
+ * (after the user has fixed the original issue).
+ * 
+ * @see https://jira.jboss.org/browse/EJBTHREE-2136
+ * 
+ * In brief, the EJBTHREE-2136 JIRA describes a bug in singleton bean deployments which used to
+ * cause "Already registered ..." errors for the singleton container when a previously failed
+ * deployment was redeployed.
+ *
  *
  * @author Jaikiran Pai
  * @version $Revision: $
@@ -51,6 +55,13 @@ public class BrokenSingletonRedeploymentTestCase extends AbstractSingletonTestCa
 
    private final String DEPLOYMENT_FILE_NAME = "singleton-redeploy-test.jar";
 
+   /**
+    * This test, first deploys a broken singleton bean deployment. It then undeploys this 
+    * failed deployment. The test then simulates a fix to the broken deployment and redeploys
+    * it. This test expects the redeployment of the newly fixed deployment to pass.
+    *  
+    * @throws Exception
+    */
    @Test
    public void testBrokenDeploymentRedeployment() throws Exception
    {
