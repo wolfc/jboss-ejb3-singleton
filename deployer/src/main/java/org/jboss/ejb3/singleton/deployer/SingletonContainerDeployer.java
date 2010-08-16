@@ -190,6 +190,12 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          throw new DeploymentException(cnfe);
       }
 
+      // EJBTHREE-2106 https://jira.jboss.org/browse/EJBTHREE-2106
+      // One more of those mysterious security integration params.
+      // We set the JaccContextId to the simple name of the Deployment unit (don't ask why)
+      // It's "copied" from the current implementation in Ejb3AnnotationHandler.getJaccContextId()
+      singletonContainer.setJaccContextId(unit.getSimpleName());
+
       singletonContainer.setEjbReferenceResolver(this.ejbReferenceResolver);
       singletonContainer.setMessageDestinationResolver(this.messageDestinationResolver);
       singletonContainer.setPersistenceUnitResolver(this.puResolver);
