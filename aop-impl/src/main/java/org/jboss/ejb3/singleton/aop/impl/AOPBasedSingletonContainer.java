@@ -769,10 +769,10 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    private void initTimeout()
    {
       NamedMethodMetaData timeoutMethodMetaData = this.getMetaData().getTimeoutMethod();
-      if (timeoutMethodMetaData != null)
-      {
-         this.timeoutMethod = this.getTimeoutCallback(timeoutMethodMetaData, this.getBeanClass());
-      }
+      // pass-on the control to getTimeoutCallback (even if the timeoutMethodMetaData is null).
+      // the getTimeoutCallback method can look for a timeout method (like the legacy ejbTimeout(Timer timer) 
+      // method) even in the absence of the timeout method metadata.
+      this.timeoutMethod = this.getTimeoutCallback(timeoutMethodMetaData, this.getBeanClass());
    }
 
    /**
