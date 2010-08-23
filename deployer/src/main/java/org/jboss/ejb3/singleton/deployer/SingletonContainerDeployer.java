@@ -352,7 +352,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          }
       }
 
-      logger.debug("Installing container for EJB " + container.getEJBName());
+      logger.info("Installing container for EJB " + container.getEJBName());
       if (containerDependencyPolicy instanceof MCDependencyPolicy)
       {
          MCDependencyPolicy policy = (MCDependencyPolicy) containerDependencyPolicy;
@@ -360,10 +360,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<DependencyMetaData> dependencies = policy.getDependencies();
          if (dependencies != null && dependencies.isEmpty() == false)
          {
-            logger.debug("with dependencies: ");
+            logger.info("with dependencies: ");
             for (DependencyMetaData dependency : dependencies)
             {
-               logger.debug(dependency.getDependency());
+               logger.info(dependency.getDependency());
                containerBMDBuilder.addDependency(dependency.getDependency());
             }
          }
@@ -371,10 +371,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<DemandMetaData> demands = policy.getDemands();
          if (demands != null && demands.isEmpty() == false)
          {
-            logger.debug("with demands: ");
+            logger.info("with demands: ");
             for (DemandMetaData demand : demands)
             {
-               logger.debug(demand.getDemand());
+               logger.info(demand.getDemand());
                containerBMDBuilder.addDemand(demand.getDemand());
             }
          }
@@ -382,10 +382,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          Set<SupplyMetaData> supplies = policy.getSupplies();
          if (supplies != null && supplies.isEmpty() == false)
          {
-            logger.debug("with supplies: ");
+            logger.info("with supplies: ");
             for (SupplyMetaData supply : supplies)
             {
-               logger.debug(supply.getSupply());
+               logger.info(supply.getSupply());
                containerBMDBuilder.addSupply(supply.getSupply());
             }
          }
