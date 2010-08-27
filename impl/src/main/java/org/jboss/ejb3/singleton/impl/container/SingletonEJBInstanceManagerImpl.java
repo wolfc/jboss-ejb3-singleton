@@ -27,7 +27,11 @@ import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiationException;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
+import org.jboss.ejb3.instantiator.spi.InvalidConstructionParamsException;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
+import org.jboss.logging.Logger;
 
 /**
  * SingletonInstanceManager
@@ -37,6 +41,11 @@ import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
  */
 public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceManager
 {
+
+   /**
+    * Logger
+    */
+   private static Logger logger = Logger.getLogger(SingletonEJBInstanceManagerImpl.class);
 
    /**
     * Bean implementation class
@@ -61,6 +70,11 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    protected BeanContext singletonBeanContext;
 
    /**
+    * Responsible for instantiating a bean
+    */
+   protected BeanInstantiator beanInstantiator;
+
+   /**
     * Constructs a {@link SingletonEJBInstanceManagerImpl} for the <code>beanClass</code> and
     * its associated {@link EJBContainer}
     * 
@@ -70,9 +84,26 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container,
          EJBLifecycleHandler lifecycleHandler)
    {
+      this(beanClass, container, lifecycleHandler, null);
+   }
+
+   /**
+    * Constructs a {@link SingletonEJBInstanceManagerImpl} for the <code>beanClass</code> and
+    * its associated {@link EJBContainer}
+    * 
+    * @param beanClass The bean implementation class
+    * @param container The container managing the bean
+    * @param beanInstantiator {@link BeanInstantiator} which will be used to create a bean instance. This can be null,
+    *                       in which case, this {@link SingletonEJBInstanceManagerImpl} will directly instantiate the
+    *                       bean instance through a call to {@link Class#newInstance()}.
+    */
+   public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container,
+         EJBLifecycleHandler lifecycleHandler, BeanInstantiator beanInstantiator)
+   {
       this.beanClass = beanClass;
       this.container = container;
       this.beanInstanceLifecycleHandler = lifecycleHandler;
+      this.beanInstantiator = beanInstantiator;
    }
 
    /**
@@ -123,14 +154,14 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
       return this.singletonBeanContext;
 
    }
-   
+
    /**
     * @see org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager#destroy()
     */
    @Override
    public void destroy()
    {
-      synchronized(this)
+      synchronized (this)
       {
          if (this.singletonBeanContext == null)
          {
@@ -183,7 +214,7 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
    {
       return new SingletonBeanContext(beanInstance, this.container);
    }
-   
+
    /**
     * Creates an instance of the bean class
     * 
@@ -191,17 +222,43 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     */
    protected Object createBeanInstance()
    {
-      try
+      if (this.beanInstantiator != null)
       {
-         return this.beanClass.newInstance();
+         try
+         {
+            return this.beanInstantiator.create(this.beanClass, null);
+         }
+         catch (IllegalArgumentException iae)
+         {
+            throw iae;
+         }
+         catch (InvalidConstructionParamsException ice)
+         {
+            throw ice;
+         }
+         catch (BeanInstantiationException bie)
+         {
+            throw new RuntimeException("Could not create an instance for bean class: " + this.beanClass, bie);
+         }
       }
-      catch (InstantiationException ie)
+      else
       {
-         throw new RuntimeException("Could not create an instance of the bean classs: " + this.beanClass, ie);
-      }
-      catch (IllegalAccessException iae)
-      {
-         throw new RuntimeException("Could not create an instance of the bean class: " + this.beanClass, iae);
+         // fall back on normal instantiation.
+         try
+         {
+            logger.debug("No bean instantiator configured. Using Class.newInstance() to instantiate bean class: "
+                  + this.beanClass);
+            
+            return this.beanClass.newInstance();
+         }
+         catch (InstantiationException ie)
+         {
+            throw new RuntimeException("Could not create an instance of the bean classs: " + this.beanClass, ie);
+         }
+         catch (IllegalAccessException iae)
+         {
+            throw new RuntimeException("Could not create an instance of the bean class: " + this.beanClass, iae);
+         }
       }
    }
 

@@ -58,6 +58,7 @@ import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
@@ -114,6 +115,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    
    protected MessageDestinationReferenceResolver messageDestinationResolver;
 
+   protected JBossSessionBean31MetaData sessionBean31MetaData;
    
    protected DependencyPolicy dependencyPolicy;
    
@@ -157,17 +159,9 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService) throws ClassNotFoundException
    {
       super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
+      this.sessionBean31MetaData = beanMetaData;
       // HACK
       this.dependencyPolicy = new JBoss5DependencyPolicy(this);
-      // create a AOP based interceptor registry which will be used by the container
-      InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
-      // create the new jboss-ejb3-container-spi based singleton container
-      this.delegate = new SingletonContainer(this.getBeanClass(), beanMetaData, interceptorRegistry);
-      SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this);
-      this.delegate.setBeanInstanceManager(instanceManager);
-
-      // init the timeout method
-      this.initTimeout();
    }
 
    /**
@@ -198,6 +192,18 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    public void create() throws Exception
    {
       super.create();
+
+      // create a AOP based interceptor registry which will be used by the container
+      InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
+      // create the new jboss-ejb3-container-spi based singleton container
+      this.delegate = new SingletonContainer(this.getBeanClass(), this.sessionBean31MetaData, interceptorRegistry);
+      SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this, this.getBeanInstantiator());
+      this.delegate.setBeanInstanceManager(instanceManager);
+
+      // init the timeout method
+      this.initTimeout();
+
+      // let the delegate any of its create work
       this.delegate.create();
       
    }
@@ -869,6 +875,20 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    protected ExecutorService getAsynchronousExecutor()
    {
       return super.getAsynchronousExecutor();
+   }
+   
+   /**
+    * Sets the {@link BeanInstantiator} for this container. 
+    * @param beanInstantiator
+    */
+   public void setBeanInstantiator(BeanInstantiator beanInstantiator)
+   {
+      // if already set, then don't allow to reset it
+      if (this.beanInstantiator != null)
+      {
+         throw new IllegalStateException("Bean instantiator has already been set in container, for EJB: " + this.ejbName + " can't reset it");
+      }
+      this.beanInstantiator = beanInstantiator;
    }
    
 }

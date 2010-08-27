@@ -22,6 +22,7 @@
 package org.jboss.ejb3.singleton.aop.impl;
 
 import org.jboss.ejb3.container.spi.BeanContext;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.singleton.aop.impl.context.LegacySingletonBeanContext;
 import org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl;
 
@@ -34,16 +35,27 @@ import org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl;
 public class AOPBasedSingletonInstanceManager extends SingletonEJBInstanceManagerImpl
 {
 
+   /**
+    * The container to which this instance manger belongs 
+    */
    private AOPBasedSingletonContainer aopBasedContainer;
 
    /**
-    * @param beanClass
-    * @param container
-    * @param lifecycleHandler
+    * @param container The AOP based singleton container to which this instance manager belongs
     */
    public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container)
    {
-      super(container.getBeanClass(), container, container);
+      this(container, null);
+   }
+   
+   /**
+    * @param container The AOP based singleton container to which this instance manager belongs
+    * @param beanInstantiator {@link BeanInstantiator} used for creating the EJB instances
+    * 
+    */
+   public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container, BeanInstantiator beanInstantiator)
+   {
+      super(container.getBeanClass(), container, container, beanInstantiator);
       this.aopBasedContainer = container;
    }
 

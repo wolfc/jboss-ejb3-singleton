@@ -30,21 +30,18 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
 
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.aop.impl.test.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.aop.impl.test.container.SimpleSingletonBean;
+import org.jboss.ejb3.timerservice.spi.TimerServiceFactory;
 import org.jboss.metadata.annotation.creator.ejb.jboss.JBoss50Creator;
 import org.jboss.metadata.annotation.finder.AnnotationFinder;
 import org.jboss.metadata.annotation.finder.DefaultAnnotationFinder;
@@ -57,6 +54,7 @@ import org.jnp.server.SingletonNamingServer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 /**
  * AOPBasedSingletonContainerTestCase
@@ -132,6 +130,18 @@ public class AOPBasedSingletonContainerTestCase
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
       when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());
       singletonContainer.setJavaComp(mockJavaEEComponent);
+      // mock bean instantiator
+      BeanInstantiator mockBeanInstantiator = mock(BeanInstantiator.class);
+      when(mockBeanInstantiator.create(Matchers.any(Class.class), Matchers.anyListOf(Object.class).toArray()))
+            .thenReturn(new SimpleSingletonBean());
+      singletonContainer.setBeanInstantiator(mockBeanInstantiator);
+      
+      // mock timerservice factory
+      TimerServiceFactory mockTimerServiceFactory = mock(TimerServiceFactory.class);
+      singletonContainer.setTimerServiceFactory(mockTimerServiceFactory);
+      
+      singletonContainer.create();
+      singletonContainer.start();
       
       Method getCountMethod = SimpleSingletonBean.class.getDeclaredMethod("getCount", new Class<?>[]
       {});

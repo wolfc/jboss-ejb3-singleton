@@ -46,6 +46,7 @@ import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
 import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
@@ -142,6 +143,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       //addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
       addInput(org.jboss.ejb3.async.spi.AttachmentNames.ASYNC_INVOCATION_PROCESSOR);
+      addInput(org.jboss.ejb3.instantiator.spi.AttachmentNames.NAME_BEAN_INSTANCE_INSTANTIATOR);
    }
 
    /**
@@ -166,6 +168,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       {
          throw new IllegalStateException("No async executor available for deployment unit " + unit);
       }
+      
+      BeanInstantiator beanInstantiator = (BeanInstantiator) unit.getAttachment(org.jboss.ejb3.instantiator.spi.AttachmentNames.NAME_BEAN_INSTANCE_INSTANTIATOR);
+      if (beanInstantiator == null)
+      {
+         throw new IllegalStateException("Bean instantiator not available in deployment unit: " + unit);
+      }
+      
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
 
@@ -199,6 +208,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.setEjbReferenceResolver(this.ejbReferenceResolver);
       singletonContainer.setMessageDestinationResolver(this.messageDestinationResolver);
       singletonContainer.setPersistenceUnitResolver(this.puResolver);
+      singletonContainer.setBeanInstantiator(beanInstantiator);
 
       singletonContainer.instantiated();
 

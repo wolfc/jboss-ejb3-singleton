@@ -26,6 +26,7 @@
     
     <properties>
         <version.ejb3.singleton.container.spi>${project.version}</version.ejb3.singleton.container.spi>
+        <version.ejb3.bean.instantiator>1.0.0-alpha-2</version.ejb3.bean.instantiator>
     </properties>
     
     <build>
@@ -60,6 +61,12 @@
             <groupId>org.jboss.ejb3.singleton</groupId>
             <artifactId>jboss-ejb3-singleton-spi</artifactId>
             <version>${version.ejb3.singleton.container.spi}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3.instantiator</groupId>
+            <artifactId>jboss-ejb3-instantiator-spi</artifactId>
+            <version>${version.ejb3.bean.instantiator}</version>
         </dependency>
         
          <dependency>
