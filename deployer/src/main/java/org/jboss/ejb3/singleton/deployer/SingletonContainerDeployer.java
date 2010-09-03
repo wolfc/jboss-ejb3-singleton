@@ -44,8 +44,8 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
-import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
@@ -367,10 +367,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       {
          MCDependencyPolicy policy = (MCDependencyPolicy) containerDependencyPolicy;
          // depends
+         logger.info("with dependencies: ");
          Set<DependencyMetaData> dependencies = policy.getDependencies();
          if (dependencies != null && dependencies.isEmpty() == false)
          {
-            logger.info("with dependencies: ");
             for (DependencyMetaData dependency : dependencies)
             {
                logger.info(dependency.getDependency());
@@ -378,10 +378,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
             }
          }
          // demands
+         logger.info("with demands: ");
          Set<DemandMetaData> demands = policy.getDemands();
          if (demands != null && demands.isEmpty() == false)
          {
-            logger.info("with demands: ");
             for (DemandMetaData demand : demands)
             {
                logger.info(demand.getDemand());
@@ -389,10 +389,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
             }
          }
          // supplies
+         logger.info("with supplies: ");
          Set<SupplyMetaData> supplies = policy.getSupplies();
          if (supplies != null && supplies.isEmpty() == false)
          {
-            logger.info("with supplies: ");
             for (SupplyMetaData supply : supplies)
             {
                logger.info(supply.getSupply());

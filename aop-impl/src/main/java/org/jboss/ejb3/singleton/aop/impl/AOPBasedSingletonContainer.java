@@ -50,14 +50,14 @@ import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.Ejb3Registry;
 import org.jboss.ejb3.aop.BeanContainer;
 import org.jboss.ejb3.common.lang.SerializableMethod;
-import org.jboss.ejb3.common.resolvers.spi.EjbReference;
-import org.jboss.ejb3.common.resolvers.spi.EjbReferenceResolver;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.container.spi.EJBInstanceManager;
 import org.jboss.ejb3.container.spi.InterceptorRegistry;
 import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
+import org.jboss.ejb3.ejbref.resolver.spi.EjbReference;
+import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
@@ -111,7 +111,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    
    protected PersistenceUnitDependencyResolver puResolver;
    
-   protected EjbReferenceResolver ejbRefResolver;
+   private EjbReferenceResolver ejbRefResolver;
    
    protected MessageDestinationReferenceResolver messageDestinationResolver;
 
@@ -652,12 +652,10 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @see org.jboss.ejb3.EJBContainer#canResolveEJB()
     */
    @Override
+   @Deprecated
    public boolean canResolveEJB()
    {
-      // TODO: Revisit this after we have a implementation for 
-      // nointerface ejbrefresolver
-      return false;
-      //return this.ejbRefResolver != null;
+      return this.ejbRefResolver != null;
    }
    
    @Override
