@@ -22,8 +22,11 @@
 package org.jboss.ejb3.singleton.deployer;
 
 import java.lang.reflect.InvocationHandler;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.naming.Context;
@@ -162,10 +165,37 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
     */
    private void process(DeploymentUnit unit, JBossSessionBean31MetaData sessionBean, EJBContainer container)
    {
+
+      Map<String, JNDIBinderImpl> jndiBinders = new HashMap<String, JNDIBinderImpl>();
       // process remote business interfaces
-      processRemoteBusinessInterfaces(unit, sessionBean, container);
+      jndiBinders.putAll(processRemoteBusinessInterfaces(unit, sessionBean, container));
       // process local business interfaces
-      processLocalBusinessInterfaces(unit, sessionBean, container);
+      jndiBinders.putAll(processLocalBusinessInterfaces(unit, sessionBean, container));
+      
+      StringBuilder sb = new StringBuilder();
+      sb.append("Binding the following entries in JNDI for singleton bean: ");
+      sb.append(container.getEjbName());
+      sb.append("\n\n");
+      for (Map.Entry<String, JNDIBinderImpl> jndiBinderEntry :jndiBinders.entrySet())
+      {
+         String jndiBinderMCBeanName = jndiBinderEntry.getKey();
+         JNDIBinderImpl jndiBinder = jndiBinderEntry.getValue();
+         BeanMetaData jndiBinderBMD = createBeanMetaData(jndiBinderMCBeanName, jndiBinder, container);
+         DeploymentUnit parentUnit = unit.getParent();
+         // MC internal details (has to be attached to parent for MC magic to work)
+         parentUnit.addAttachment(BeanMetaData.class + ":" + jndiBinderMCBeanName, jndiBinderBMD);
+         
+         sb.append("\t");
+         sb.append(jndiBinder.getJNDIName());
+         sb.append(" - ");
+         sb.append(jndiBinder.getDescription());
+         sb.append("\n");
+      }
+
+      if (jndiBinders.isEmpty() == false)
+      {
+         logger.info(sb.toString());
+      }
    }
 
    /**
@@ -176,15 +206,16 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
     * @param sessionBean The bean metadata
     * @param container The container being processed
     */
-   private void processRemoteBusinessInterfaces(DeploymentUnit unit, JBossSessionBean31MetaData sessionBean,
+   private Map<String, JNDIBinderImpl> processRemoteBusinessInterfaces(DeploymentUnit unit, JBossSessionBean31MetaData sessionBean,
          EJBContainer container)
    {
       BusinessRemotesMetaData businessRemotes = sessionBean.getBusinessRemotes();
       if (businessRemotes == null || businessRemotes.size() == 0)
       {
-         return;
+         return Collections.emptyMap();
       }
-
+      Map<String, JNDIBinderImpl> jndiBinders = new HashMap<String, JNDIBinderImpl>();
+      
       String defaultInvokerLocatorURL = ProxyRemotingUtils.getDefaultClientBinding();
 
       DefaultJndiBindingPolicy jndibindingPolicy = DefaultJNDIBindingPolicyFactory.getDefaultJNDIBindingPolicy();
@@ -225,11 +256,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
 
             String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessRemote);
 
-            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
+            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy, "EJB3.x Remote Business Interface");
             String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
-            BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-            DeploymentUnit parentUnit = unit.getParent();
-            parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+            jndiBinders.put(binderMCBeanName, jndiBinder);
 
          }
          catch (ClassNotFoundException cnfe)
@@ -249,11 +278,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          String defaultRemoteJNDIName = jndiNameResolver.resolveRemoteBusinessDefaultJNDIName(sessionBean);
          Object proxy = proxyFactory.createProxy(allRemoteinterfaces.toArray(new Class<?>[allRemoteinterfaces.size()]),
                invocationHandler);
-         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultRemoteJNDIName, proxy);
+         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultRemoteJNDIName, proxy, "EJB3.x Default Remote Business Interface");
          String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + defaultRemoteJNDIName;
-         BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-         DeploymentUnit parentUnit = unit.getParent();
-         parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+         jndiBinders.put(binderMCBeanName, jndiBinder);
 
       }
       else
@@ -271,15 +298,13 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
                   invokerLocatorURL, clientInterceptors);
             Object proxy = proxyFactory.createProxy(allRemoteinterfaces
                   .toArray(new Class<?>[allRemoteinterfaces.size()]), invocationHandler);
-            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
+            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy, "EJB3.x Default Remote Business Interface");
             String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
-            BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-            DeploymentUnit parentUnit = unit.getParent();
-            parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+            jndiBinders.put(binderMCBeanName, jndiBinder);
          }
 
       }
-
+      return jndiBinders;
    }
 
    /**
@@ -290,15 +315,17 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
     * @param sessionBean The bean metadata
     * @param container The container being processed
     */
-   private void processLocalBusinessInterfaces(DeploymentUnit unit, JBossSessionBean31MetaData sessionBean,
+   private Map<String, JNDIBinderImpl> processLocalBusinessInterfaces(DeploymentUnit unit, JBossSessionBean31MetaData sessionBean,
          EJBContainer container)
    {
       BusinessLocalsMetaData businessLocals = sessionBean.getBusinessLocals();
       if (businessLocals == null || businessLocals.size() == 0)
       {
-         return;
+         return Collections.emptyMap();
       }
-
+      
+      Map<String, JNDIBinderImpl> jndiBinders = new HashMap<String, JNDIBinderImpl>();
+      
       DefaultJndiBindingPolicy jndibindingPolicy = DefaultJNDIBindingPolicyFactory.getDefaultJNDIBindingPolicy();
       SessionBeanJNDINameResolver jndiNameResolver = JNDIPolicyBasedJNDINameResolverFactory.getJNDINameResolver(
             sessionBean, jndibindingPolicy);
@@ -346,11 +373,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
 
          String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessLocal);
 
-         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
+         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy, "EJB3.x Local Business Interface");
          String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
-         BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-         DeploymentUnit parentUnit = unit.getParent();
-         parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+         jndiBinders.put(binderMCBeanName, jndiBinder);
 
       }
 
@@ -361,11 +386,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
          String defaultBusinessLocalJNDIName = jndiNameResolver.resolveLocalBusinessDefaultJNDIName(sessionBean);
          Object proxy = proxyFactory.createProxy(allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]),
                invocationHandler);
-         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultBusinessLocalJNDIName, proxy);
+         JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, defaultBusinessLocalJNDIName, proxy, "EJB3.x Default Local Business Interface");
          String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + defaultBusinessLocalJNDIName;
-         BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-         DeploymentUnit parentUnit = unit.getParent();
-         parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+         jndiBinders.put(binderMCBeanName, jndiBinder);
       }
       else
       {
@@ -380,16 +403,14 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
             InvocationHandler invocationHandler = new SingletonBeanLocalInvocationHandler(containerRegistryKey, containerGUID, clientInterceptors);
             Object proxy = proxyFactory.createProxy(
                   allLocalinterfaces.toArray(new Class<?>[allLocalinterfaces.size()]), invocationHandler);
-            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy);
+            JNDIBinderImpl jndiBinder = new JNDIBinderImpl(jndiCtx, jndiName, proxy, "EJB3.x Default Local Business Interface");
             String binderMCBeanName = JNDI_BINDER_MC_BEAN_PREFIX + jndiName;
-            BeanMetaData jndiBinderBMD = createBeanMetaData(binderMCBeanName, jndiBinder, container);
-            DeploymentUnit parentUnit = unit.getParent();
-            parentUnit.addAttachment(BeanMetaData.class + ":" + binderMCBeanName, jndiBinderBMD);
+            jndiBinders.put(binderMCBeanName, jndiBinder);
 
          }
 
       }
-
+      return jndiBinders;
    }
 
    /**

@@ -42,12 +42,28 @@ public class JNDIBinderImpl
    private String jndiName;
 
    private Object jndiObject;
+   
+   private String description;
 
    public JNDIBinderImpl(Context ctx, String jndiName, Object objectToBind)
    {
       this.context = ctx;
       this.jndiName = jndiName;
       this.jndiObject = objectToBind;
+   }
+   
+   /**
+    * 
+    * @param ctx
+    * @param jndiName
+    * @param objectToBind
+    * @param description A brief description of what this JNDI entry is for (for example: "EJB3.x Default Local Business Interface" for
+    *                   the jndi binding of default local business interface of a EJB3.x bean) 
+    */
+   public JNDIBinderImpl(Context ctx, String jndiName, Object objectToBind, String description)
+   {
+      this(ctx, jndiName, objectToBind);
+      this.description = description;
    }
 
    @Start
@@ -71,4 +87,15 @@ public class JNDIBinderImpl
    {
       Util.unbind(this.context, this.jndiName);
    }
+   
+   public String getJNDIName()
+   {
+      return this.jndiName;
+   }
+   
+   public String getDescription()
+   {
+      return this.description;
+   }
+   
 }
