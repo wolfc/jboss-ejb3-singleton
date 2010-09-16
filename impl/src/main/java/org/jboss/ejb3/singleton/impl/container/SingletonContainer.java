@@ -140,10 +140,10 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
       //         encInjector.inject(this);
       //      }
 
-      if (this.sessionBeanMetaData.isInitOnStartup())
-      {
-         this.instanceManager.create();
-      }
+//      if (this.sessionBeanMetaData.isInitOnStartup())
+//      {
+//         this.instanceManager.create();
+//      }
    }
 
    /**
