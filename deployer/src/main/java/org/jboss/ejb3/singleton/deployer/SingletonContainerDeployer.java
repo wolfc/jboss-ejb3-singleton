@@ -422,7 +422,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    private String getJavaEEComponentMCBeanName(DeploymentUnit deploymentUnit)
    {
       String applicationName = this.javaeeComponentInformer.getApplicationName(deploymentUnit);
-      String moduleName = this.javaeeComponentInformer.getModulePath(deploymentUnit);
+      String moduleName = this.javaeeComponentInformer.getModuleName(deploymentUnit);
       String componentName = this.javaeeComponentInformer.getComponentName(deploymentUnit);
 
       final StringBuilder builder = new StringBuilder("jboss.naming:");

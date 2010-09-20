@@ -27,7 +27,7 @@
     <properties>
         <version.org.jboss.deployers>2.0.8.GA</version.org.jboss.deployers>
         <version.ejb3.reflect.proxy>1.0.0-alpha-1</version.ejb3.reflect.proxy>
-        <version.reloaded.naming>0.1.0</version.reloaded.naming>
+        <version.reloaded.naming>0.2.0</version.reloaded.naming>
     </properties>
     
     <build>
@@ -84,13 +84,13 @@
         
         <!-- Naming -->
         <dependency>
-            <groupId>org.jboss.reloaded</groupId>
-            <artifactId>jboss-reloaded-naming</artifactId>
+            <groupId>org.jboss.reloaded.naming</groupId>
+            <artifactId>jboss-reloaded-naming-spi</artifactId>
             <version>${version.reloaded.naming}</version>
         </dependency>
         
         <dependency>
-            <groupId>org.jboss.reloaded</groupId>
+            <groupId>org.jboss.reloaded.naming</groupId>
             <artifactId>jboss-reloaded-naming-deployers</artifactId>
             <version>${version.reloaded.naming}</version>
         </dependency>

@@ -28,7 +28,7 @@
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
 	    <version.ejb3.core>1.5.2</version.ejb3.core>
         <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
-        <version.reloaded.naming>0.1.0</version.reloaded.naming>
+        <version.reloaded.naming>0.2.0</version.reloaded.naming>
         <version.timerservice.spi>1.0.3</version.timerservice.spi> 
         <version.org.jboss.ejb3.ejbref.resolver>1.0.0-alpha-1</version.org.jboss.ejb3.ejbref.resolver>       
     </properties>
@@ -93,13 +93,13 @@
     
     <!-- Naming -->
         <dependency>
-            <groupId>org.jboss.reloaded</groupId>
-            <artifactId>jboss-reloaded-naming</artifactId>
+            <groupId>org.jboss.reloaded.naming</groupId>
+            <artifactId>jboss-reloaded-naming-spi</artifactId>
             <version>${version.reloaded.naming}</version>
         </dependency>
         
         <dependency>
-            <groupId>org.jboss.reloaded</groupId>
+            <groupId>org.jboss.reloaded.naming</groupId>
             <artifactId>jboss-reloaded-naming-deployers</artifactId>
             <version>${version.reloaded.naming}</version>
         </dependency>
