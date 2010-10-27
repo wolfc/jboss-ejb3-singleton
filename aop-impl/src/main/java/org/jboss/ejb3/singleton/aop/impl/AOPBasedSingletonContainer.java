@@ -34,6 +34,7 @@ import javax.ejb.EJBException;
 import javax.ejb.Handle;
 import javax.ejb.Timer;
 import javax.naming.Context;
+import javax.naming.NamingException;
 
 import org.jboss.aop.Advisor;
 import org.jboss.aop.Domain;
@@ -74,6 +75,8 @@ import org.jboss.ejb3.timerservice.spi.TimedObjectInvoker;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
+import org.jboss.metadata.ejb.spec.BusinessLocalsMetaData;
+import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
 import org.jboss.metadata.ejb.spec.NamedMethodMetaData;
 import org.jboss.reloaded.naming.CurrentComponent;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
@@ -875,6 +878,37 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return super.getAsynchronousExecutor();
    }
    
+   @Override
+   public <T> T getBusinessObject(BeanContext<?> beanContext, Class<T> businessInterface) throws IllegalStateException
+   {
+      if (businessInterface == null)
+      {
+         throw new IllegalArgumentException("Business interface type cannot be null, for getBusinessObject method call");
+      }
+      // check the validity of the business interface
+      if (!this.isValidBusinessInterface(businessInterface))
+      {
+         throw new IllegalArgumentException(businessInterface.getName()
+               + " is not a valid business interface for bean named: " + this.ejbName);
+      }
+      
+      String jndiName = this.resolveEJB(this.ejbName, businessInterface, null);
+      if (logger.isTraceEnabled())
+      {
+         logger.trace("getBusinessObject resolved jndi name: " + jndiName + " for business interface "
+               + businessInterface + " for bean named: " + this.ejbName);
+      }
+      try
+      {
+         return businessInterface.cast(getInitialContext().lookup(jndiName));
+      }
+      catch (NamingException ne)
+      {
+         throw new RuntimeException("Could not get business object for interface type: " + businessInterface + " and bean named : "
+               + this.ejbName, ne);
+      }
+   }
+   
    /**
     * Sets the {@link BeanInstantiator} for this container. 
     * @param beanInstantiator
@@ -887,6 +921,46 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          throw new IllegalStateException("Bean instantiator has already been set in container, for EJB: " + this.ejbName + " can't reset it");
       }
       this.beanInstantiator = beanInstantiator;
+   }
+   
+   /**
+    * Returns true if the passed {@link Class} is a business interface of the 
+    * bean, managed by this container. Else returns false.
+    * 
+    * @param businessInterface The {@link Class} being checked
+    * @return
+    */
+   private boolean isValidBusinessInterface(Class<?> businessInterface)
+   {
+      if (businessInterface == null)
+      {
+         throw new IllegalArgumentException("Business interface cannot be null");
+      }
+      
+      boolean isValidBusinessInterface = false;
+      // first check business locals
+      BusinessLocalsMetaData businessLocals = this.sessionBean31MetaData.getBusinessLocals();
+      if (businessLocals != null)
+      {
+         isValidBusinessInterface = businessLocals.contains(businessInterface.getName());
+      }
+      // if it's not a valid business local, then check business remotes
+      if (!isValidBusinessInterface)
+      {
+         BusinessRemotesMetaData businessRemotes = this.sessionBean31MetaData.getBusinessRemotes();
+         if (businessRemotes != null)
+         {
+            isValidBusinessInterface = businessRemotes.contains(businessInterface.getName());
+         }
+      }
+      // if it's not a valid business local and neither a valid business remote, then
+      // check for the no-interface view
+      if (!isValidBusinessInterface)
+      {
+         isValidBusinessInterface = this.sessionBean31MetaData.isNoInterfaceBean() && this.beanClassName.equals(businessInterface.getName());
+      }
+      
+      return isValidBusinessInterface;
    }
    
 }
