@@ -44,14 +44,17 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
+import org.jboss.ejb3.common.registrar.spi.Ejb3RegistrarLocator;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
+import org.jboss.ejb3.instantiator.spi.BeanInstantiatorRegistration;
 import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.impl.resolver.EjbLinkResolver;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
+import org.jboss.kernel.Kernel;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
@@ -116,6 +119,11 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    private JavaEEComponentInformer javaeeComponentInformer;
 
    /**
+    * MC Kernel
+    */
+   private Kernel kernel;
+   
+   /**
     * Constructs a {@link SingletonContainerDeployer} for
     * processing singleton beans
     */
@@ -143,7 +151,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       //addInput(EJB3Deployment.class);
       addInput(AttachmentNames.PROCESSED_METADATA);
       addInput(org.jboss.ejb3.async.spi.AttachmentNames.ASYNC_INVOCATION_PROCESSOR);
-      addInput(org.jboss.ejb3.instantiator.spi.AttachmentNames.NAME_BEAN_INSTANCE_INSTANTIATOR);
    }
 
    /**
@@ -169,10 +176,18 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          throw new IllegalStateException("No async executor available for deployment unit " + unit);
       }
       
-      BeanInstantiator beanInstantiator = (BeanInstantiator) unit.getAttachment(org.jboss.ejb3.instantiator.spi.AttachmentNames.NAME_BEAN_INSTANCE_INSTANTIATOR);
+      // Get the Bean Instantiator
+      final DeploymentUnit parent = unit.getParent();
+      final String appName = parent!=null?parent.getName():null;
+      final String moduleName = unit.getName();
+      final String beanInstantiatorAttachmentName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
+            appName, moduleName, beanMetaData.getName());
+      final BeanInstantiator beanInstantiator = Ejb3RegistrarLocator.locateRegistrar().lookup(
+            beanInstantiatorAttachmentName, BeanInstantiator.class);
       if (beanInstantiator == null)
       {
-         throw new IllegalStateException("Bean instantiator not available in deployment unit: " + unit);
+         throw new IllegalStateException(unit+ " must contain an attachment of name "
+               + beanInstantiatorAttachmentName);
       }
       
       // now start with actual processing
@@ -460,6 +475,12 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    public void setJavaEEComponentInformer(JavaEEComponentInformer componentInformer)
    {
       this.javaeeComponentInformer = componentInformer;
+   }
+   
+   @Inject
+   public void setKernel(final Kernel kernel)
+   {
+      this.kernel = kernel;
    }
 
    /**
