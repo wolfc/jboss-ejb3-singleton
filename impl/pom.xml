@@ -9,7 +9,7 @@
     <parent>
         <groupId>org.jboss.ejb3.singleton</groupId>
         <artifactId>jboss-ejb3-singleton-parent</artifactId>
-        <version>1.0.0-alpha-15-SNAPSHOT</version>
+        <version>1.0.0-alpha-15</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
@@ -26,7 +26,7 @@
     
     <properties>
         <version.ejb3.singleton.container.spi>${project.version}</version.ejb3.singleton.container.spi>
-        <version.ejb3.bean.instantiator>1.0.0-alpha-3-SNAPSHOT</version.ejb3.bean.instantiator>
+        <version.ejb3.bean.instantiator>1.0.0-alpha-3</version.ejb3.bean.instantiator>
     </properties>
     
     <build>
