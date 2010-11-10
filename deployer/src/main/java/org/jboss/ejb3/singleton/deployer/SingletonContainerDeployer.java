@@ -54,7 +54,6 @@ import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.impl.resolver.EjbLinkResolver;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
-import org.jboss.kernel.Kernel;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
@@ -117,11 +116,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * component informer
     */
    private JavaEEComponentInformer javaeeComponentInformer;
-
-   /**
-    * MC Kernel
-    */
-   private Kernel kernel;
    
    /**
     * Constructs a {@link SingletonContainerDeployer} for
@@ -475,12 +469,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    public void setJavaEEComponentInformer(JavaEEComponentInformer componentInformer)
    {
       this.javaeeComponentInformer = componentInformer;
-   }
-   
-   @Inject
-   public void setKernel(final Kernel kernel)
-   {
-      this.kernel = kernel;
    }
 
    /**
