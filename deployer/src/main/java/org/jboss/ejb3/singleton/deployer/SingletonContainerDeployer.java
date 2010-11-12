@@ -170,20 +170,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          throw new IllegalStateException("No async executor available for deployment unit " + unit);
       }
       
-      // Get the Bean Instantiator
-      final DeploymentUnit parent = unit.getParent();
-      final String appName = parent!=null?parent.getName():null;
-      final String moduleName = unit.getName();
-      final String beanInstantiatorAttachmentName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
-            appName, moduleName, beanMetaData.getName());
-      final BeanInstantiator beanInstantiator = Ejb3RegistrarLocator.locateRegistrar().lookup(
-            beanInstantiatorAttachmentName, BeanInstantiator.class);
-      if (beanInstantiator == null)
-      {
-         throw new IllegalStateException(unit+ " must contain an attachment of name "
-               + beanInstantiatorAttachmentName);
-      }
-      
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
 
@@ -217,7 +203,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.setEjbReferenceResolver(this.ejbReferenceResolver);
       singletonContainer.setMessageDestinationResolver(this.messageDestinationResolver);
       singletonContainer.setPersistenceUnitResolver(this.puResolver);
-      singletonContainer.setBeanInstantiator(beanInstantiator);
 
       singletonContainer.instantiated();
 
@@ -416,6 +401,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // Too bad we have to know the field name. Need to do more research on MC to see if we can
       // add property metadata based on type instead of field name.
       containerBMDBuilder.addPropertyMetaData("javaComp", javaCompInjectMetaData);
+
+      String applicationName = this.javaeeComponentInformer.getApplicationName(unit);
+      String moduleName = this.javaeeComponentInformer.getModuleName(unit);
+      String componentName = this.javaeeComponentInformer.getComponentName(unit);
+      final String beanInstantiatorName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
+            applicationName, moduleName, componentName);
+      containerBMDBuilder.addPropertyMetaData("beanInstantiator", new AbstractInjectionValueMetaData(beanInstantiatorName));
 
       // TODO: This is an undocumented nonsense of MC
       DeploymentUnit parentUnit = unit.getParent();

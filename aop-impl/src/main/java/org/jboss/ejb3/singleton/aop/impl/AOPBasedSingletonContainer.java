@@ -59,7 +59,6 @@ import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReference;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
-import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
@@ -907,20 +906,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          throw new RuntimeException("Could not get business object for interface type: " + businessInterface + " and bean named : "
                + this.ejbName, ne);
       }
-   }
-   
-   /**
-    * Sets the {@link BeanInstantiator} for this container. 
-    * @param beanInstantiator
-    */
-   public void setBeanInstantiator(BeanInstantiator beanInstantiator)
-   {
-      // if already set, then don't allow to reset it
-      if (this.beanInstantiator != null)
-      {
-         throw new IllegalStateException("Bean instantiator has already been set in container, for EJB: " + this.ejbName + " can't reset it");
-      }
-      this.beanInstantiator = beanInstantiator;
    }
    
    /**
