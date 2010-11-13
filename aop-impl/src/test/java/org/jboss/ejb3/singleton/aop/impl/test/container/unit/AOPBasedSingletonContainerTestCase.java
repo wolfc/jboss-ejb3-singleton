@@ -37,6 +37,7 @@ import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
+import org.jboss.ejb3.instantiator.impl.Ejb31SpecBeanInstantiator;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.aop.impl.test.container.InVMContainerInvocationImpl;
@@ -125,7 +126,7 @@ public class AOPBasedSingletonContainerTestCase
       sessionBeanMetaData.setContainerName(containerName);
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
-            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool());
+            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool(), new Ejb31SpecBeanInstantiator());
       // setup dummy java:/comp
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
       when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());

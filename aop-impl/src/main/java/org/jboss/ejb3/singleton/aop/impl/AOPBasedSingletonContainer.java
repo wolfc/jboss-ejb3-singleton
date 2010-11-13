@@ -153,18 +153,20 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du, ExecutorService asyncExecutorService)
          throws ClassNotFoundException
    {
-      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
+      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService, null);
       this.deploymentUnit = du;
 
    }
 
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService) throws ClassNotFoundException
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService,
+         final BeanInstantiator beanInstantiator) throws ClassNotFoundException
    {
       super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       this.sessionBean31MetaData = beanMetaData;
       // HACK
       this.dependencyPolicy = new JBoss5DependencyPolicy(this);
+      this.setBeanInstantiator(beanInstantiator);
    }
 
    /**
@@ -907,20 +909,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          throw new RuntimeException("Could not get business object for interface type: " + businessInterface + " and bean named : "
                + this.ejbName, ne);
       }
-   }
-   
-   /**
-    * Sets the {@link BeanInstantiator} for this container. 
-    * @param beanInstantiator
-    */
-   public void setBeanInstantiator(BeanInstantiator beanInstantiator)
-   {
-      // if already set, then don't allow to reset it
-      if (this.beanInstantiator != null)
-      {
-         throw new IllegalStateException("Bean instantiator has already been set in container, for EJB: " + this.ejbName + " can't reset it");
-      }
-      this.beanInstantiator = beanInstantiator;
    }
    
    /**

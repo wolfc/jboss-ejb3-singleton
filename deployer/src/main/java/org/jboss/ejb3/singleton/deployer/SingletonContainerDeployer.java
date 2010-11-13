@@ -44,10 +44,8 @@ import org.jboss.deployers.structure.spi.DeploymentUnit;
 import org.jboss.ejb3.DependencyPolicy;
 import org.jboss.ejb3.MCDependencyPolicy;
 import org.jboss.ejb3.common.deployers.spi.AttachmentNames;
-import org.jboss.ejb3.common.registrar.spi.Ejb3RegistrarLocator;
 import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
-import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiatorRegistration;
 import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
@@ -170,20 +168,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          throw new IllegalStateException("No async executor available for deployment unit " + unit);
       }
       
-      // Get the Bean Instantiator
-      final DeploymentUnit parent = unit.getParent();
-      final String appName = parent!=null?parent.getName():null;
-      final String moduleName = unit.getName();
-      final String beanInstantiatorAttachmentName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
-            appName, moduleName, beanMetaData.getName());
-      final BeanInstantiator beanInstantiator = Ejb3RegistrarLocator.locateRegistrar().lookup(
-            beanInstantiatorAttachmentName, BeanInstantiator.class);
-      if (beanInstantiator == null)
-      {
-         throw new IllegalStateException(unit+ " must contain an attachment of name "
-               + beanInstantiatorAttachmentName);
-      }
-      
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
 
@@ -217,7 +201,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.setEjbReferenceResolver(this.ejbReferenceResolver);
       singletonContainer.setMessageDestinationResolver(this.messageDestinationResolver);
       singletonContainer.setPersistenceUnitResolver(this.puResolver);
-      singletonContainer.setBeanInstantiator(beanInstantiator);
 
       singletonContainer.instantiated();
 
@@ -416,6 +399,18 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // Too bad we have to know the field name. Need to do more research on MC to see if we can
       // add property metadata based on type instead of field name.
       containerBMDBuilder.addPropertyMetaData("javaComp", javaCompInjectMetaData);
+      
+      // Inject the bean instantiator
+      final String appName = javaeeComponentInformer.getApplicationName(unit);
+      final String moduleName = javaeeComponentInformer.getModuleName(unit);
+      String javaeeSpecAppName = appName;
+      if (javaeeSpecAppName == null)
+      {
+         javaeeSpecAppName = moduleName;
+      }
+      final String beanInstantiatorMcName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
+            javaeeSpecAppName, moduleName, container.getEjbName());
+      containerBMDBuilder.addPropertyMetaData("beanInstantiator", new AbstractInjectionValueMetaData(beanInstantiatorMcName));
 
       // TODO: This is an undocumented nonsense of MC
       DeploymentUnit parentUnit = unit.getParent();

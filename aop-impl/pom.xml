@@ -26,11 +26,13 @@
     
     <properties>
         <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.5.2</version.ejb3.core>
+	    <version.ejb3.core>1.6.3-SNAPSHOT</version.ejb3.core>
         <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
         <version.reloaded.naming>0.2.0</version.reloaded.naming>
-        <version.timerservice.spi>1.0.3</version.timerservice.spi> 
+        <version.timerservice.spi>1.0.4</version.timerservice.spi> 
         <version.org.jboss.ejb3.ejbref.resolver>1.0.0-alpha-1</version.org.jboss.ejb3.ejbref.resolver>       
+        <version.org.jboss.ejb3.effigy>0.1.0</version.org.jboss.ejb3.effigy>
+        <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4-SNAPSHOT</version.org.jboss.ejb3.instantiator>
     </properties>
     
     <build>
@@ -187,6 +189,27 @@
             </exclusion>
           </exclusions>
           <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+          <groupId>org.jboss.ejb3.effigy</groupId>
+          <artifactId>jboss-ejb3-effigy-common</artifactId>
+          <version>${version.org.jboss.ejb3.effigy}</version>
+          <scope>test</scope>
+        </dependency>
+
+        <dependency>
+          <groupId>org.jboss.ejb3.effigy</groupId>
+          <artifactId>jboss-ejb3-effigy-int1</artifactId>
+          <version>${version.org.jboss.ejb3.effigy}</version>
+          <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.ejb3.instantiator</groupId>
+            <artifactId>jboss-ejb3-instantiator-impl</artifactId>
+            <version>${version.org.jboss.ejb3.instantiator}</version>
+            <scope>test</scope>
         </dependency>
         
         <!-- ***************************** -->
