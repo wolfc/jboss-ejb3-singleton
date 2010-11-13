@@ -152,20 +152,18 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
          Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du, ExecutorService asyncExecutorService)
          throws ClassNotFoundException
    {
-      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService, null);
+      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       this.deploymentUnit = du;
 
    }
 
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService,
-         final BeanInstantiator beanInstantiator) throws ClassNotFoundException
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService) throws ClassNotFoundException
    {
       super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       this.sessionBean31MetaData = beanMetaData;
       // HACK
       this.dependencyPolicy = new JBoss5DependencyPolicy(this);
-      this.setBeanInstantiator(beanInstantiator);
    }
 
    /**

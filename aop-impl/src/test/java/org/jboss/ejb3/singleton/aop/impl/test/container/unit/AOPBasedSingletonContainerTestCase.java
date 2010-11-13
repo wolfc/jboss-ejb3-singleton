@@ -126,7 +126,8 @@ public class AOPBasedSingletonContainerTestCase
       sessionBeanMetaData.setContainerName(containerName);
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
-            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool(), new Ejb31SpecBeanInstantiator());
+            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool());
+      singletonContainer.setBeanInstantiator(new Ejb31SpecBeanInstantiator());
       // setup dummy java:/comp
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
       when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());

@@ -63,13 +63,6 @@
     
     <dependencies>
         <dependency>
-           <groupId>org.jboss.ejb3.effigy</groupId>
-           <artifactId>jboss-ejb3-effigy-int2</artifactId>
-           <version>0.1.0</version>
-           <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jboss.ejb3.ejbref.resolver</groupId>
             <artifactId>ejbref-resolver-spi</artifactId>
             <version>${version.org.jboss.ejb3.ejbref.resolver}</version>
