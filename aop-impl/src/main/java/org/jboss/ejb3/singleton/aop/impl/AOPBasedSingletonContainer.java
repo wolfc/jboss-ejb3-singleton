@@ -59,7 +59,6 @@ import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReference;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
-import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;

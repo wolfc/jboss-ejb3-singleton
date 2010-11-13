@@ -131,11 +131,6 @@ public class AOPBasedSingletonContainerTestCase
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);
       when(mockJavaEEComponent.getContext()).thenReturn(this.javaCompInitializer.getIniCtx());
       singletonContainer.setJavaComp(mockJavaEEComponent);
-      // mock bean instantiator
-      BeanInstantiator mockBeanInstantiator = mock(BeanInstantiator.class);
-      when(mockBeanInstantiator.create(Matchers.any(Class.class), Matchers.anyListOf(Object.class).toArray()))
-            .thenReturn(new SimpleSingletonBean());
-      singletonContainer.setBeanInstantiator(mockBeanInstantiator);
       
       // mock timerservice factory
       TimerServiceFactory mockTimerServiceFactory = mock(TimerServiceFactory.class);

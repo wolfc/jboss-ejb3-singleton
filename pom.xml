@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>4</version>
+        <version>5</version>
     </parent>
 
     <!-- Model Information -->
@@ -20,6 +20,7 @@
     <name>JBoss EJB 3.1+ @Singleton component parent</name>
     <url>http://www.jboss.org</url>
     <description>Aggregator for @Singleton component</description>
+
 
     <!-- Properties -->
     <properties>

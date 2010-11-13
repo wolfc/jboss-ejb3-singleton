@@ -412,6 +412,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
             javaeeSpecAppName, moduleName, container.getEjbName());
       containerBMDBuilder.addPropertyMetaData("beanInstantiator", new AbstractInjectionValueMetaData(beanInstantiatorMcName));
 
+      String applicationName = this.javaeeComponentInformer.getApplicationName(unit);
+      String moduleName = this.javaeeComponentInformer.getModuleName(unit);
+      String componentName = this.javaeeComponentInformer.getComponentName(unit);
+      final String beanInstantiatorName = BeanInstantiatorRegistration.getInstantiatorRegistrationName(
+            applicationName, moduleName, componentName);
+      containerBMDBuilder.addPropertyMetaData("beanInstantiator", new AbstractInjectionValueMetaData(beanInstantiatorName));
+
       // TODO: This is an undocumented nonsense of MC
       DeploymentUnit parentUnit = unit.getParent();
       parentUnit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
