@@ -32,7 +32,7 @@
         <version.timerservice.spi>1.0.4</version.timerservice.spi> 
         <version.org.jboss.ejb3.ejbref.resolver>1.0.0-alpha-1</version.org.jboss.ejb3.ejbref.resolver>       
         <version.org.jboss.ejb3.effigy>0.1.0</version.org.jboss.ejb3.effigy>
-        <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4-SNAPSHOT</version.org.jboss.ejb3.instantiator>
+        <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4</version.org.jboss.ejb3.instantiator>
     </properties>
     
     <build>
