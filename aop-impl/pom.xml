@@ -25,8 +25,7 @@
     <description>An AOP based (delegating) implementation of the singleton container</description>
     
     <properties>
-        <version.ejb3.singleton.impl>${project.version}</version.ejb3.singleton.impl>
-	    <version.ejb3.core>1.6.3</version.ejb3.core>
+	    <version.ejb3.core>1.7.1</version.ejb3.core>
         <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
         <version.reloaded.naming>0.2.0</version.reloaded.naming>
         <version.timerservice.spi>1.0.4</version.timerservice.spi> 
@@ -71,7 +70,7 @@
         <dependency>
             <groupId>org.jboss.ejb3.singleton</groupId>
             <artifactId>jboss-ejb3-singleton-impl</artifactId>
-            <version>${version.ejb3.singleton.impl}</version>
+            <version>${project.version}</version>
         </dependency>
 
 	<dependency>
