@@ -29,6 +29,8 @@
         <version.ejb3.reflect.proxy>1.0.0-alpha-1</version.ejb3.reflect.proxy>
         <version.reloaded.naming>0.2.0</version.reloaded.naming>
         <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4</version.org.jboss.ejb3.instantiator>
+        <version.switchboard>1.0.0-alpha-9</version.switchboard>
+        <version.jboss.injection>1.0.0-alpha-3</version.jboss.injection>
     </properties>
     
     <build>
@@ -118,6 +120,26 @@
         <dependency>
             <groupId>org.jboss.metadata</groupId>
             <artifactId>jboss-metadata-ejb</artifactId>
+        </dependency>
+        
+        <!-- SwitchBoard -->
+        <dependency>
+            <groupId>org.jboss.switchboard</groupId>
+            <artifactId>jboss-switchboard-spi</artifactId>
+            <version>${version.switchboard}</version>
+        </dependency>
+        
+        <!--  jboss-injection -->
+        <dependency>
+            <groupId>org.jboss.injection</groupId>
+            <artifactId>jboss-injection-manager</artifactId>
+            <version>${version.jboss.injection}</version>
+        </dependency>
+        <!--  For LazyEEInjector -->           
+        <dependency>
+            <groupId>org.jboss.injection</groupId>
+            <artifactId>jboss-injection-mc-impl</artifactId>
+            <version>${version.jboss.injection}</version>
         </dependency>
         
         <!-- Get rid of this! it's required for ServiceMBeanSupport class
