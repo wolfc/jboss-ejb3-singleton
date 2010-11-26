@@ -25,7 +25,6 @@
     <description>Implementation of @Singleton as detailed by EJB 3.1 Specification</description>
     
     <properties>
-        <version.ejb3.singleton.container.spi>${project.version}</version.ejb3.singleton.container.spi>
         <version.ejb3.bean.instantiator>1.0.0-alpha-4</version.ejb3.bean.instantiator>
     </properties>
     
@@ -60,7 +59,7 @@
         <dependency>
             <groupId>org.jboss.ejb3.singleton</groupId>
             <artifactId>jboss-ejb3-singleton-spi</artifactId>
-            <version>${version.ejb3.singleton.container.spi}</version>
+            <version>${project.version}</version>
         </dependency>
         
         <dependency>
