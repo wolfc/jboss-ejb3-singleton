@@ -887,8 +887,12 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       // check the validity of the business interface
       if (!this.isValidBusinessInterface(businessInterface))
       {
-         throw new IllegalArgumentException(businessInterface.getName()
-               + " is not a valid business interface for bean named: " + this.ejbName);
+         // Ideally, throwing a IllegalArgumentException would have been more appropriate, but the
+         // EJB3.1 spec, section 4.8.6 says:
+         // "If a session bean instance attempts to invoke a method of the SessionContext interface, and the
+         // access is not allowed in Table 3, the container must throw the java.lang.IllegalStateException."
+         // and TCK tests expect IllegalStateException. 
+         throw new IllegalStateException(businessInterface.getName() + " is not a valid business interface for bean named: " + this.ejbName);
       }
       
       String jndiName = this.resolveEJB(this.ejbName, businessInterface, null);
