@@ -39,7 +39,6 @@ import org.jboss.beans.metadata.spi.DemandMetaData;
 import org.jboss.beans.metadata.spi.DependencyMetaData;
 import org.jboss.beans.metadata.spi.SupplyMetaData;
 import org.jboss.beans.metadata.spi.builder.BeanMetaDataBuilder;
-import org.jboss.dependency.spi.ControllerState;
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
@@ -54,12 +53,12 @@ import org.jboss.ejb3.kernel.JNDIKernelRegistryPlugin;
 import org.jboss.ejb3.resolvers.MessageDestinationReferenceResolver;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.impl.resolver.EjbLinkResolver;
+import org.jboss.injection.injector.EEInjector;
 import org.jboss.injection.injector.metadata.EnvironmentEntryType;
 import org.jboss.injection.injector.metadata.InjectionTargetType;
 import org.jboss.injection.injector.metadata.JndiEnvironmentRefsGroup;
 import org.jboss.injection.manager.spi.InjectionManager;
 import org.jboss.injection.manager.spi.Injector;
-import org.jboss.injection.mc.injector.LazyEEInjector;
 import org.jboss.injection.mc.metadata.JndiEnvironmentImpl;
 import org.jboss.jpa.resolvers.PersistenceUnitDependencyResolver;
 import org.jboss.logging.Logger;
@@ -579,13 +578,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       if (this.hasInjectionTargets(jndiEnvironment))
       {
          // create the injector
-         LazyEEInjector lazyEEInjector = new LazyEEInjector(jndiEnvironment);
+         EEInjector eeInjector = new EEInjector(jndiEnvironment);
          // add the injector the injection manager
-         injectionManager.addInjector(lazyEEInjector);
+         injectionManager.addInjector(eeInjector);
          // Deploy the Injector as a MC bean (so that the fully populated naming context (obtained via the SwitchBoard
          // Barrier) gets injected.
          String injectorMCBeanName = this.getInjectorMCBeanNamePrefix(unit) + ",bean=" + container.getEjbName();
-         BeanMetaData injectorBMD = this.createInjectorBMD(injectorMCBeanName, lazyEEInjector, switchBoard);
+         BeanMetaData injectorBMD = this.createInjectorBMD(injectorMCBeanName, eeInjector, switchBoard);
          // add BMD to parent, since this is a component DU. and BMDDeployer doesn't pick up BMD from components!
          unit.getParent().addAttachment(BeanMetaData.class + ":" + injectorMCBeanName, injectorBMD);
          
@@ -613,13 +612,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          if (this.hasInjectionTargets(jndiEnvironmentForInterceptor))
          {
             // create the injector
-            LazyEEInjector lazyEEInjector = new LazyEEInjector(jndiEnvironmentForInterceptor);
+            EEInjector eeInjector = new EEInjector(jndiEnvironmentForInterceptor);
             // add the injector the injection manager
-            injectionManager.addInjector(lazyEEInjector);
+            injectionManager.addInjector(eeInjector);
             // Deploy the Injector as a MC bean (so that the fully populated naming context (obtained via the SwitchBoard
             // Barrier) gets injected.
             String interceptorInjectorMCBeanName = this.getInjectorMCBeanNamePrefix(unit) + ",bean=" + container.getEjbName() + ",interceptor=" + interceptor.getName();
-            BeanMetaData injectorBMD = this.createInjectorBMD(interceptorInjectorMCBeanName, lazyEEInjector, switchBoard);
+            BeanMetaData injectorBMD = this.createInjectorBMD(interceptorInjectorMCBeanName, eeInjector, switchBoard);
             // add BMD to parent, since this is a component DU. and BMDDeployer doesn't pick up BMD from components!
             unit.getParent().addAttachment(BeanMetaData.class + ":" + interceptorInjectorMCBeanName, injectorBMD);
             
@@ -661,7 +660,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
    }
    
    /**
-    * Creates and returns {@link BeanMetaData} for the passed {@link LazyEEInjector injector} and sets up
+    * Creates and returns {@link BeanMetaData} for the passed {@link EEInjector injector} and sets up
     * dependency on the passed {@link Barrier SwitchBoard barrier}.
     * 
     * @param injectorMCBeanName
@@ -669,15 +668,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * @param barrier
     * @return
     */
-   private BeanMetaData createInjectorBMD(String injectorMCBeanName, LazyEEInjector injector, Barrier barrier)
+   private BeanMetaData createInjectorBMD(String injectorMCBeanName, EEInjector injector, Barrier barrier)
    {
       BeanMetaDataBuilder builder = BeanMetaDataBuilderFactory.createBuilder(injectorMCBeanName, injector.getClass().getName());
       builder.setConstructorValue(injector);
 
-      // add injection dependency on INSTALLED state of SwitchBoard Barrier
-      AbstractInjectionValueMetaData barrierInjection = new AbstractInjectionValueMetaData(barrier.getId());
-      barrierInjection.setDependentState(ControllerState.INSTALLED);
-      builder.addPropertyMetaData("barrier", barrierInjection);
+      // add dependency on INSTALLED state of SwitchBoard Barrier
+      builder.addDependency(barrier.getId());
 
       // return the Injector BMD
       return builder.getBeanMetaData();
