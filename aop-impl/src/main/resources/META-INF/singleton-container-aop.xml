@@ -28,11 +28,11 @@
          <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/> 
          <interceptor-ref name="CMTTx"/>
          <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
-         <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
-         <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
-         <stack-ref name="EJBInterceptors"/>
+         <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/>
          <!-- container concurrency management -->
          <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
+         <stack-ref name="EJBInterceptors"/>
       </bind>
       
         <stack name="SingletonBeanTimeoutMethodStack">
@@ -52,7 +52,8 @@
             <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/> 
             <interceptor-ref name="CMTTx"/>
             <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
-            <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/> 
+            <interceptor-ref name="org.jboss.ejb3.AllowedOperationsInterceptor"/>
+            <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
             <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/> 
             <!-- Uncomment the following EJBInterceptors and comment out from org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory to
              org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor once, JBAS-8130 is fixed
@@ -63,10 +64,6 @@
             <advice name="setup" aspect="InvocationContextInterceptor"/>
             <advice name="fillMethod" aspect="InvocationContextInterceptor"/>
             <advice name="aroundInvoke" aspect="InjectInterceptorsFactory"/>
-            
-            
-            <!-- container concurrency management -->
-            <interceptor-ref name="org.jboss.ejb3.concurrency.aop.interceptor.ContainerManagedConcurrencyInterceptorFactory"/>
       </stack>
       
       
