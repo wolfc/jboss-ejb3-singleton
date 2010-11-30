@@ -110,31 +110,24 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     * @see org.jboss.ejb3.container.spi.EJBInstanceManager#create()
     */
    @Override
-   public Serializable create()
+   public synchronized Serializable create()
    {
-      if (this.singletonBeanContext == null)
+      if(this.singletonBeanContext != null)
+         throw new IllegalStateException("Singleton " + container + " was already created");
+
+      Object beanInstance = this.createBeanInstance();
+      this.singletonBeanContext = this.createBeanContext(beanInstance);
+
+      if (this.beanInstanceLifecycleHandler != null)
       {
-         boolean newInstanceCreated = false;
-         synchronized (this)
+         // do post-construct
+         try
          {
-            if (this.singletonBeanContext == null)
-            {
-               Object beanInstance = this.createBeanInstance();
-               this.singletonBeanContext = this.createBeanContext(beanInstance);
-               newInstanceCreated = true;
-            }
+            this.beanInstanceLifecycleHandler.postConstruct(this.singletonBeanContext);
          }
-         if (newInstanceCreated && this.beanInstanceLifecycleHandler != null)
+         catch (Exception e)
          {
-            // do post-construct
-            try
-            {
-               this.beanInstanceLifecycleHandler.postConstruct(this.singletonBeanContext);
-            }
-            catch (Exception e)
-            {
-               throw new RuntimeException("Could not invoke PostConstruct on the newly created bean instance", e);
-            }
+            throw new RuntimeException("Could not invoke PostConstruct on the newly created bean instance", e);
          }
       }
       return this.singletonBeanContext.getSessionId();
@@ -145,7 +138,7 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     * @see org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager#get()
     */
    @Override
-   public BeanContext get()
+   public synchronized BeanContext get()
    {
       if (this.singletonBeanContext == null)
       {
