@@ -8,7 +8,7 @@
       <interceptor-ref name="org.jboss.ejb3.remoting.IsLocalInterceptor"/>
       <interceptor-ref name="org.jboss.ejb3.security.client.SecurityClientInterceptor"/>
       <interceptor-ref name="org.jboss.aspects.tx.ClientTxPropagationInterceptor"/>
-      <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptor" />      
+      <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptorFactory" scope="PER_CLASS"/>      
       <interceptor-ref name="org.jboss.aspects.remoting.InvokeRemoteInterceptor"/>
     </stack>
     
@@ -16,7 +16,7 @@
 
       <bind pointcut="execution(public * *->*(..))">
          <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
-         <interceptor-ref name="org.jboss.ejb3.security.AuthenticationInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptorFactory"/>
       </bind>
       <bind pointcut="execution(public * @org.jboss.ejb3.annotation.SecurityDomain->*(..))">
          <interceptor-ref name="Basic Authorization"/>
