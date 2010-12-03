@@ -61,11 +61,6 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.jboss.metadata</groupId>
-            <artifactId>jboss-metadata-ejb</artifactId>
-        </dependency>
-        
-        <dependency>
             <groupId>org.jboss.ejb3.instantiator</groupId>
             <artifactId>jboss-ejb3-instantiator-spi</artifactId>
             <version>${version.org.jboss.ejb3.instantiator}</version>
