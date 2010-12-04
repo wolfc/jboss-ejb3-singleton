@@ -134,64 +134,23 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
    }
 
    /**
-    * Invokes the post-construct lifecycle on the <code>targetBeanContext</code>
-    * by processing it through a chain of AOP interceptors (and user defined javax.interceptor.Interceptor)
     * 
     * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePostConstruct(org.jboss.ejb3.container.spi.BeanContext)
     */
    @Override
    public void invokePostConstruct(BeanContext targetBeanContext) throws Exception
    {
-//      // fallback on legacy AOP based lifecycle impl
-//      this.legacySingletonBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
-//            targetBeanContext);
-//      // TODO: This passes the bean context through a series of injectors
-//      // which are responsible for carrying out the injection on the bean context (ex: field based
-//      // injection like for @PersistenceContext).
-//      // THIS HAS TO BE IN THE EJBLifecycleHandler SO THAT THE INJECTIONS
-//      // CAN HAPPEN ON LIFECYCLE EVENTS (LIKE BEAN INSTANTIATION)
-//      //this.aopBasedSingletonContainer.injectBeanContext(legacySingletonBeanContext);
-//
-//      // Note: The method name initialiseInterceptorInstances() gives a 
-//      // wrong impression. This method not just instantiates a interceptor instance,
-//      // but it also injects (through the help of InjectionHanlder(s)) the interceptor
-//      // instance for any injectable fields
-//      // TODO: Ideally, this should be split up into separate instantiation and injection
-//      // calls.
-//      //legacySingletonBeanContext.initialiseInterceptorInstances();
-////      for (Class<?> interceptorClass : this.getInterceptorClasses())
-////      {
-////         Object interceptorInstance = legacySingletonBeanContext.getInterceptor(interceptorClass);
-////         List<Injector<Object>> injectors = this.interceptorInjectors.get(interceptorClass);
-////         if (injectors == null)
-////         {
-////            continue;
-////         }
-////         for (Injector<Object> injector : injectors)
-////         {
-////            injector.inject(interceptorInstance);
-////         }
-////      }
-//
-//      // invoke post construct lifecycle on the bean/interceptor instances
-//      this.aopBasedSingletonContainer.invokePostConstruct(legacySingletonBeanContext);
 
    }
 
    /**
-    * Invokes the pre-destroy lifecycle on the <code>targetBeanContext</code>
-    * by processing it through a chain of AOP interceptors (and user defined javax.interceptor.Interceptor)
     * 
     * @see org.jboss.ejb3.container.spi.InterceptorRegistry#invokePreDestroy(org.jboss.ejb3.container.spi.BeanContext)
     */
    @Override
    public void invokePreDestroy(BeanContext targetBeanContext) throws Exception
    {
-      // fallback on legacy AOP based lifecycle impl
-//      org.jboss.ejb3.BeanContext<?> legacyBeanContext = new SingletonBeanContext(this.aopBasedSingletonContainer,
-//            targetBeanContext);
-//      this.aopBasedSingletonContainer.invokePreDestroy(legacyBeanContext);
-
+      
    }
 
    /**
