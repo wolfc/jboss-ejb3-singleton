@@ -82,6 +82,8 @@ import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
 import org.jboss.metadata.ejb.spec.NamedMethodMetaData;
 import org.jboss.reloaded.naming.CurrentComponent;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
+import org.jboss.wsf.spi.invocation.integration.InvocationContextCallback;
+import org.jboss.wsf.spi.invocation.integration.ServiceEndpointContainer;
 
 /**
  * <p>
@@ -96,7 +98,7 @@ import org.jboss.reloaded.naming.spi.JavaEEComponent;
  * @author Jaikiran Pai
  * @version $Revision: $
  */
-public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler, MultiTimeoutMethodTimedObjectInvoker
+public class AOPBasedSingletonContainer extends SessionSpecContainer implements EJBContainer, EJBLifecycleHandler, MultiTimeoutMethodTimedObjectInvoker, ServiceEndpointContainer
 {
 
    /**
@@ -976,4 +978,39 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       this.iDependOnSingletonBeanContainers = containers;
    }
    
+   /**
+    * {@inheritDoc}
+    * @return
+    */
+   @Override
+   public String getContainerName()
+   {
+      String containerName = this.getObjectName() != null ? this.getObjectName().getCanonicalName() : null;
+      return containerName;
+   }
+   
+   /**
+    * {@inheritDoc}
+    * @return
+    */
+   @Override
+   public Class getServiceImplementationClass()
+   {
+      return this.getBeanClass();
+   }
+   
+   /**
+    * {@inheritDoc}
+    * 
+    * @param method
+    * @param args
+    * @param callback
+    * @return
+    * @throws Throwable
+    */
+   @Override
+   public Object invokeEndpoint(Method method, Object[] args, InvocationContextCallback callback) throws Throwable
+   {
+      return this.invoke((Serializable) null, (Class<?>) null, method, args);
+   }
 }
