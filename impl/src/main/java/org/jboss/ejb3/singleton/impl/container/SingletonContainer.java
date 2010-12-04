@@ -132,18 +132,6 @@ public class SingletonContainer implements EJBContainer, EJBLifecycleHandler
     */
    public void start()
    {
-      // TODO: If @Startup, then create a singleton bean context here
-
-      //      // Use ENCInjectors to setup ENC
-      //      for (EJBContainerENCInjector encInjector : this.encInjectors)
-      //      {
-      //         encInjector.inject(this);
-      //      }
-
-//      if (this.sessionBeanMetaData.isInitOnStartup())
-//      {
-//         this.instanceManager.create();
-//      }
    }
 
    /**
