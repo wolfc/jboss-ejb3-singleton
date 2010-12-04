@@ -72,7 +72,7 @@ public class SimpleSingletonContainerTest
       this.singletonContainer = new SingletonContainer(SimpleSingletonBean.class, singletonBeanMetadata,
             new EmptyInterceptorRegistry());
       this.singletonContainer.setBeanInstanceManager(new SingletonEJBInstanceManagerImpl(SimpleSingletonBean.class,
-            this.singletonContainer, this.singletonContainer));
+            this.singletonContainer, this.singletonContainer, null, null));
    }
 
    /**

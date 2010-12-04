@@ -33,6 +33,7 @@ import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.beans.metadata.api.annotations.Inject;
 import org.jboss.beans.metadata.plugins.AbstractInjectionValueMetaData;
+import org.jboss.beans.metadata.plugins.AbstractListMetaData;
 import org.jboss.beans.metadata.plugins.builder.BeanMetaDataBuilderFactory;
 import org.jboss.beans.metadata.spi.BeanMetaData;
 import org.jboss.beans.metadata.spi.DemandMetaData;
@@ -100,6 +101,8 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          DeploymentVisitor<JBossEnterpriseBeanMetaData>
 {
 
+   static final String IS_STARTUP_SINGLETON_PRESENT_IN_DU = "org.jboss.ejb3.singleton.deployer.startup_singleton_present";
+   
    /**
     * Logger
     */
@@ -149,6 +152,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // we output the container as a MC bean
       addOutput(BeanMetaData.class);
       addOutput(org.jboss.ejb3.EJBContainer.class);
+      addOutput(EJBContainer.class);
 
    }
 
@@ -177,6 +181,17 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
+
+      // Add a flag to indicate that this deployment has a @Startup @Singleton. Note that 
+      // the flag is added to the top level unit of this DU (since StartupSingletonInitiatorDeployer 
+      // processes only top level DUs)
+      // This flag is added for optimization, so that the StartupSingletonInitiatorDeployer
+      // (which is a bit expensive) can only pick up relevant deployments and ignore the rest
+      if (sessionBean.isInitOnStartup())
+      {
+         DeploymentUnit topLevelUnit = unit.getTopLevel();
+         topLevelUnit.addAttachment(IS_STARTUP_SINGLETON_PRESENT_IN_DU, Boolean.TRUE);
+      }
 
       // Create a singleton container
       ClassLoader classLoader = unit.getClassLoader();
@@ -346,6 +361,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       String[] dependsOn = sessionBeanMetaData.getDependsOn();
       if (dependsOn != null)
       {
+         AbstractListMetaData containerDependencies = new AbstractListMetaData();
          EjbLinkResolver ejbLinkResolver = new EjbLinkResolver();
          for (String dependency : dependsOn)
          {
@@ -362,7 +378,9 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
                      + dependencyBean.getEjbClass() + " is not a singleton bean");
             }
             // when a singleton bean depends on the other singleton bean, we add:
-            // 1) A dependency on the target EJB container
+            // 1) A dependency on the target EJB container. This we do by injecting the target EJB container
+            // into this container being installed. The injected target containers will then be used 
+            // to instantiate the target @Depends bean (at the appropriate time)
             // 2) A dependency on each of the exposed JNDI names of the target EJB (so that the 
             // target EJB can be accessed through JNDI within the dependent EJB)
             
@@ -378,9 +396,13 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
                containerDependencyPolicy.addDependency(JNDIKernelRegistryPlugin.JNDI_DEPENDENCY_PREFIX + jndiName);
             }
             String dependencyBeanContainerName = dependencyBean.getContainerName();
-            containerDependencyPolicy.addDependency(dependencyBeanContainerName);
-
+            // create a @Inject 
+            AbstractInjectionValueMetaData containerDependencyInjection = new AbstractInjectionValueMetaData(dependencyBeanContainerName);
+            // add the @Inject to a list which will then be set on the container
+            containerDependencies.add(containerDependencyInjection);
          }
+         // add the list of @Inject(s)
+         containerBMDBuilder.addPropertyMetaData("singletonDependsOn", containerDependencies);
       }
 
       logger.info("Installing container for EJB " + container.getEJBName());
@@ -445,6 +467,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       DeploymentUnit parentUnit = unit.getParent();
       parentUnit.addAttachment(BeanMetaData.class + ":" + containerMCBeanName, containerBMDBuilder.getBeanMetaData());
       unit.addAttachment(org.jboss.ejb3.EJBContainer.class + ":" + containerMCBeanName, container);
+      
+      //add the new SPI container as an attachment (org.jboss.ejb3.singleton.deployer.StartupSingletonInitiatorDeployer will
+      // use this at a later stage)
+      unit.addAttachment(EJBContainer.class, container);
    }
 
    /**

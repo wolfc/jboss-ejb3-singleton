@@ -21,10 +21,15 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
+import java.util.List;
+
+import javax.ejb.DependsOn;
+
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.singleton.aop.impl.context.LegacySingletonBeanContext;
 import org.jboss.ejb3.singleton.impl.container.SingletonEJBInstanceManagerImpl;
+import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
 
 /**
  * AOPBasedSingletonInstanceManager
@@ -42,20 +47,14 @@ public class AOPBasedSingletonInstanceManager extends SingletonEJBInstanceManage
 
    /**
     * @param container The AOP based singleton container to which this instance manager belongs
-    */
-   public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container)
-   {
-      this(container, null);
-   }
-   
-   /**
-    * @param container The AOP based singleton container to which this instance manager belongs
     * @param beanInstantiator {@link BeanInstantiator} used for creating the EJB instances
+    * @param dependsOn The list of {@link SingletonEJBInstanceManager instance managers} which will be used 
+    *                   to instantiate the {@link DependsOn @DependsOn} singleton beans
     * 
     */
-   public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container, BeanInstantiator beanInstantiator)
+   public AOPBasedSingletonInstanceManager(AOPBasedSingletonContainer container, BeanInstantiator beanInstantiator, List<SingletonEJBInstanceManager> dependsOn)
    {
-      super(container.getBeanClass(), container, container, beanInstantiator);
+      super(container.getBeanClass(), container, container, beanInstantiator, dependsOn);
       this.aopBasedContainer = container;
    }
 

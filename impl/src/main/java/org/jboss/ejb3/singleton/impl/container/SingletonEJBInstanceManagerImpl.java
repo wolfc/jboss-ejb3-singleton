@@ -22,6 +22,9 @@
 package org.jboss.ejb3.singleton.impl.container;
 
 import java.io.Serializable;
+import java.util.List;
+
+import javax.ejb.DependsOn;
 
 import org.jboss.ejb3.container.spi.BeanContext;
 import org.jboss.ejb3.container.spi.EJBContainer;
@@ -73,19 +76,8 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     * Responsible for instantiating a bean
     */
    protected BeanInstantiator beanInstantiator;
-
-   /**
-    * Constructs a {@link SingletonEJBInstanceManagerImpl} for the <code>beanClass</code> and
-    * its associated {@link EJBContainer}
-    * 
-    * @param beanClass The bean implementation class
-    * @param container The container managing the bean
-    */
-   public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container,
-         EJBLifecycleHandler lifecycleHandler)
-   {
-      this(beanClass, container, lifecycleHandler, null);
-   }
+   
+   private List<SingletonEJBInstanceManager> dependsOn;
 
    /**
     * Constructs a {@link SingletonEJBInstanceManagerImpl} for the <code>beanClass</code> and
@@ -96,14 +88,17 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
     * @param beanInstantiator {@link BeanInstantiator} which will be used to create a bean instance. This can be null,
     *                       in which case, this {@link SingletonEJBInstanceManagerImpl} will directly instantiate the
     *                       bean instance through a call to {@link Class#newInstance()}.
+    * @param dependsOn The list of {@link SingletonEJBInstanceManager instance managers} which will be used 
+    *                   to instantiate the {@link DependsOn @DependsOn} singleton beans. Can be null.                       
     */
    public SingletonEJBInstanceManagerImpl(Class<?> beanClass, EJBContainer container,
-         EJBLifecycleHandler lifecycleHandler, BeanInstantiator beanInstantiator)
+         EJBLifecycleHandler lifecycleHandler, BeanInstantiator beanInstantiator, List<SingletonEJBInstanceManager> dependsOn)
    {
       this.beanClass = beanClass;
       this.container = container;
       this.beanInstanceLifecycleHandler = lifecycleHandler;
       this.beanInstantiator = beanInstantiator;
+      this.dependsOn = dependsOn;
    }
 
    /**
@@ -115,6 +110,18 @@ public class SingletonEJBInstanceManagerImpl implements SingletonEJBInstanceMana
       if(this.singletonBeanContext != null)
          throw new IllegalStateException("Singleton " + container + " was already created");
 
+      // first create @DependsOn singleton beans
+      if (this.dependsOn != null && !this.dependsOn.isEmpty())
+      {
+         for (SingletonEJBInstanceManager instanceManager : this.dependsOn)
+         {
+            logger.debug("Instantiating @Depends bean: " + instanceManager.getEJBContainer().getEJBName()
+                  + " during creation of singleton bean " + this.container.getEJBName());
+            // get the instance (Note: don't call create, since create() throws an exception
+            // if a singleton instance is already created)
+            instanceManager.get();
+         }
+      }
       Object beanInstance = this.createBeanInstance();
       this.singletonBeanContext = this.createBeanContext(beanInstance);
 

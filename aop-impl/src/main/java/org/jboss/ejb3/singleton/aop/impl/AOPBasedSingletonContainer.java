@@ -26,10 +26,13 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import javax.ejb.DependsOn;
 import javax.ejb.EJBException;
 import javax.ejb.Handle;
 import javax.ejb.Timer;
@@ -127,6 +130,11 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    
    protected Method timeoutMethod;
 
+   /**
+    * The list of {@link EJBContainer EJBContainers} on which the singleton bean
+    * managed by this container, {@link DependsOn @DependsOn}
+    */
+   private List<EJBContainer> iDependOnSingletonBeanContainers;
    
    /**
     * Returns the AOP domain name which this container uses
@@ -199,7 +207,23 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       InterceptorRegistry interceptorRegistry = new AOPBasedInterceptorRegistry(this);
       // create the new jboss-ejb3-container-spi based singleton container
       this.delegate = new SingletonContainer(this.getBeanClass(), this.sessionBean31MetaData, interceptorRegistry);
-      SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this, this.getBeanInstantiator());
+      
+      // Obtain the SingletonEJBInstanceManager(s) for the @DependsOn
+      List<SingletonEJBInstanceManager> dependsOn = null;
+      if (this.iDependOnSingletonBeanContainers != null && !this.iDependOnSingletonBeanContainers.isEmpty())
+      {
+         dependsOn = new ArrayList<SingletonEJBInstanceManager>();
+         for (EJBContainer container : this.iDependOnSingletonBeanContainers)
+         {
+            EJBInstanceManager instanceManager = container.getBeanInstanceManager();
+            if (instanceManager instanceof SingletonEJBInstanceManager)
+            {
+               dependsOn.add((SingletonEJBInstanceManager) instanceManager);
+            }
+         }
+      }
+      // create the instance manager
+      SingletonEJBInstanceManager instanceManager  = new AOPBasedSingletonInstanceManager(this, this.getBeanInstantiator(), dependsOn);
       this.delegate.setBeanInstanceManager(instanceManager);
 
       // init the timeout method
@@ -234,16 +258,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       // do nothing (we don't have a pool)
    }
    
-//   /**
-//    * @see org.jboss.ejb3.EJBContainer#invokeCallback(org.jboss.ejb3.BeanContext, java.lang.Class)
-//    */
-//   @Override
-//   protected void invokeCallback(BeanContext<?> beanContext, Class<? extends Annotation> callbackAnnotationClass)
-//   {
-//      // it's the BeanContainer's responsibility to invoke the callback
-//      // through the correct interceptors. So let's pass the call to the beanContainer
-//      this.getBeanContainer().invokeCallback(beanContext, callbackAnnotationClass,LIFECYCLE_CALLBACK_STACK_NAME);
-//   }
    /**
     * @see org.jboss.ejb3.EJBContainer#pushEnc()
     */
@@ -950,6 +964,16 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       }
       
       return isValidBusinessInterface;
+   }
+   
+   /**
+    * Sets the list of {@link EJBContainer EJBContainers} on which the singleton bean 
+    * {@link DependsOn @DependsOn}
+    * @param containers
+    */
+   public void setSingletonDependsOn(List<EJBContainer> containers)
+   {
+      this.iDependOnSingletonBeanContainers = containers;
    }
    
 }
