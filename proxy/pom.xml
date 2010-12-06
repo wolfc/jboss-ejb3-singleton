@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.jboss.ejb3.singleton</groupId>
         <artifactId>jboss-ejb3-singleton-parent</artifactId>
-        <version>1.0.0-alpha-22-SNAPSHOT</version>
+        <version>1.0.0-alpha-22</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
