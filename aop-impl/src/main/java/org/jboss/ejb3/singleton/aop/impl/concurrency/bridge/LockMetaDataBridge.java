@@ -21,19 +21,19 @@
 */
 package org.jboss.ejb3.singleton.aop.impl.concurrency.bridge;
 
-import java.lang.annotation.Annotation;
-import java.util.Arrays;
-
-import javax.ejb.Lock;
-import javax.ejb.LockType;
-
 import org.jboss.ejb3.metadata.MetaDataBridge;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 import org.jboss.metadata.ejb.spec.ConcurrentMethodMetaData;
+import org.jboss.metadata.ejb.spec.ConcurrentMethodsMetaData;
 import org.jboss.metadata.ejb.spec.MethodParametersMetaData;
 import org.jboss.metadata.ejb.spec.NamedMethodMetaData;
 import org.jboss.metadata.spi.signature.DeclaredMethodSignature;
+
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
 
 /**
  * An implementation of {@link MetaDataBridge} which is responsible for
@@ -101,8 +101,11 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
          // set the method params on the named method metadata
          namedMethod.setMethodParams(methodParams);
       }
+      ConcurrentMethodsMetaData concurrentMethods = sessionBean.getConcurrentMethods();
+      if(concurrentMethods == null)
+         return null;
       // get the concurrency method metadata for this named method
-      ConcurrentMethodMetaData concurrentMethodMetaData = sessionBean.getConcurrentMethods().get(namedMethod);
+      ConcurrentMethodMetaData concurrentMethodMetaData = concurrentMethods.find(namedMethod);
       LockType lockType = null;
       // if this named method did not have concurrency metadata or lock metadata, then
       // check for the method named "*" and see if that has the lock type set
