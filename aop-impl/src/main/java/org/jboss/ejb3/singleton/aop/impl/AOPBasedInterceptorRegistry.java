@@ -96,7 +96,8 @@ public class AOPBasedInterceptorRegistry implements InterceptorRegistry
       Interceptor[] aopInterceptors = aopInvocationContext.getInterceptors();
 
       EJBContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext> invocation = new SessionContainerInvocation<AOPBasedSingletonContainer, LegacySingletonBeanContext>(
-            containerInvocation.getInvokedBusinessInterface(), aopInvocationContext.getMethodInfo(), aopInterceptors, aopBasedSingletonContainer.getAsynchronousExecutor());
+            containerInvocation.getInvokedBusinessInterface(), aopInvocationContext.getMethodInfo(), aopInterceptors,
+            aopBasedSingletonContainer);
       invocation.setAdvisor(methodInfo.getAdvisor());
       invocation.setArguments(containerInvocation.getArgs());
       // set the target bean context of the AOP invocation

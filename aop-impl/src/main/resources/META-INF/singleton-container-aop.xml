@@ -60,7 +60,7 @@
             <stack-ref name="EJBInterceptors"/> -->
             
             <interceptor-ref name="org.jboss.ejb3.connectionmanager.CachedConnectionInterceptorFactory"/>
-            <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.FutureSerializingInterceptor" />
+            <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousServerInterceptor" />
             <advice name="setup" aspect="InvocationContextInterceptor"/>
             <advice name="fillMethod" aspect="InvocationContextInterceptor"/>
             <advice name="aroundInvoke" aspect="InjectInterceptorsFactory"/>

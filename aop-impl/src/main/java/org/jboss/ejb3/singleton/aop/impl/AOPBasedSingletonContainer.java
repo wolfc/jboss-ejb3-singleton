@@ -888,7 +888,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    // package protected for use in AOPBasedInterceptorRegistry. This
    // needs a revisit.
    @Override
-   protected ExecutorService getAsynchronousExecutor()
+   public ExecutorService getAsynchronousExecutor()
    {
       return super.getAsynchronousExecutor();
    }
