@@ -21,24 +21,12 @@
 */
 package org.jboss.ejb3.singleton.aop.impl.test.container.unit;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Set;
-import java.util.concurrent.Executors;
-
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.AspectXmlLoader;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.ejb3.container.spi.ContainerInvocation;
 import org.jboss.ejb3.instantiator.impl.Ejb31SpecBeanInstantiator;
-import org.jboss.ejb3.instantiator.spi.BeanInstantiator;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.singleton.aop.impl.test.container.InVMContainerInvocationImpl;
 import org.jboss.ejb3.singleton.aop.impl.test.container.SimpleSingletonBean;
@@ -55,7 +43,18 @@ import org.jnp.server.SingletonNamingServer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Set;
+import java.util.concurrent.Executors;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * AOPBasedSingletonContainerTestCase
@@ -126,7 +125,7 @@ public class AOPBasedSingletonContainerTestCase
       sessionBeanMetaData.setContainerName(containerName);
       Hashtable props = new Hashtable();
       AOPBasedSingletonContainer singletonContainer = new AOPBasedSingletonContainer(cl, beanClassName, beanName,
-            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool());
+            this.singletonAOPDomain, props, sessionBeanMetaData, Executors.newCachedThreadPool(), Collections.EMPTY_SET);
       singletonContainer.setBeanInstantiator(new Ejb31SpecBeanInstantiator());
       // setup dummy java:/comp
       JavaEEComponent mockJavaEEComponent = mock(JavaEEComponent.class);

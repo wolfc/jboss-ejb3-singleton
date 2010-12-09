@@ -21,18 +21,6 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
-import java.lang.reflect.InvocationHandler;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.advice.AdviceStack;
 import org.jboss.aop.advice.Interceptor;
@@ -62,6 +50,17 @@ import org.jboss.metadata.ejb.jboss.jndipolicy.plugins.DefaultJNDIBindingPolicyF
 import org.jboss.metadata.ejb.jboss.jndipolicy.spi.DefaultJndiBindingPolicy;
 import org.jboss.metadata.ejb.spec.BusinessLocalsMetaData;
 import org.jboss.metadata.ejb.spec.BusinessRemotesMetaData;
+
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import java.lang.reflect.InvocationHandler;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Deployer which is responsible for deploying (multiple) MC based 
@@ -461,7 +460,9 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       // states. So let's just depend on a START state container, so that when the 
       // jndi binder binds the proxies, they will be ready to use (i.e. will be sure that
       // the container is available for invocation).
-      builder.addDemand(containerName, ControllerState.START, ControllerState.START, null);
+      // Let's try it anyway.
+      builder.addDemand(containerName, ControllerState.START, ControllerState.PRE_INSTALL, null);
+      builder.addSupply("jndi:" + jndiBinder.getJNDIName());
       return builder.getBeanMetaData();
 
    }

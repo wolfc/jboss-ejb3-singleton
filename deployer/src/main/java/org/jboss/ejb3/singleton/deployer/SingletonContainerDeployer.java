@@ -21,13 +21,6 @@
 */
 package org.jboss.ejb3.singleton.deployer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-
 import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
@@ -77,6 +70,14 @@ import org.jboss.metadata.ejb.spec.InterceptorsMetaData;
 import org.jboss.reloaded.naming.deployers.javaee.JavaEEComponentInformer;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 import org.jboss.switchboard.spi.Barrier;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 /**
  * A MC based deployer for deploying a {@link EJBContainer} as a MC bean
@@ -182,6 +183,9 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // now start with actual processing
       JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
 
+      // To make sure no dependency is put on itself we need to know all its JNDI names.
+      Collection<String> jndiNames = getJNDINames(sessionBean);
+      
       // Add a flag to indicate that this deployment has a @Startup @Singleton. Note that 
       // the flag is added to the top level unit of this DU (since StartupSingletonInitiatorDeployer 
       // processes only top level DUs)
@@ -206,8 +210,9 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       AOPBasedSingletonContainer singletonContainer;
       try
       {
-         singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean
-               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit, asyncExecutorService);
+         singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean.getEjbName(),
+                 (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit, asyncExecutorService,
+                 jndiNames);
       }
       catch (ClassNotFoundException cnfe)
       {
@@ -405,7 +410,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          containerBMDBuilder.addPropertyMetaData("singletonDependsOn", containerDependencies);
       }
 
-      logger.info("Installing container for EJB " + container.getEJBName());
+      logger.info("Installing container for EJB " + container.getEJBName() + " (" + containerMCBeanName + ")");
       if (containerDependencyPolicy instanceof MCDependencyPolicy)
       {
          MCDependencyPolicy policy = (MCDependencyPolicy) containerDependencyPolicy;
@@ -416,7 +421,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          {
             for (DependencyMetaData dependency : dependencies)
             {
-               logger.info(dependency.getDependency());
+               logger.info("   " + dependency.getDependency());
                containerBMDBuilder.addDependency(dependency.getDependency());
             }
          }
@@ -427,7 +432,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          {
             for (DemandMetaData demand : demands)
             {
-               logger.info(demand.getDemand());
+               logger.info("   " + demand.getDemand());
                containerBMDBuilder.addDemand(demand.getDemand());
             }
          }
@@ -438,7 +443,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          {
             for (SupplyMetaData supply : supplies)
             {
-               logger.info(supply.getSupply());
+               logger.info("   " + supply.getSupply());
                containerBMDBuilder.addSupply(supply.getSupply());
             }
          }
@@ -540,7 +545,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * TODO: Should we even consider business interface specific JNDI names? Will the dependent bean clients
     * expect use these jndi names for lookup?
     */
-   private List<String> getExposedJNDINames(JBossSessionBean31MetaData sessionBean)
+   private static List<String> getExposedJNDINames(JBossSessionBean31MetaData sessionBean)
    {
       List<String> jndiNames = new ArrayList<String>();
     
@@ -590,7 +595,46 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       // return the exposed JNDI names
       return jndiNames;
    }
-   
+
+   /**
+    * Return all JNDI names of the given bean.
+    * (not just a summary as opposed to getExposedJNDINames)
+    * 
+    * @param sessionBean
+    * @return
+    */
+   private static Set<String> getJNDINames(JBossSessionBean31MetaData sessionBean)
+   {
+      Set<String> jndiNames = new HashSet<String>();
+
+      jndiNames.addAll(getExposedJNDINames(sessionBean));
+
+      DefaultJndiBindingPolicy jndiPolicy = DefaultJNDIBindingPolicyFactory.getDefaultJNDIBindingPolicy();
+      SessionBean31JNDINameResolver jndiNameResolver = JNDIPolicyBasedJNDINameResolverFactory.getJNDINameResolver(sessionBean, jndiPolicy);
+
+      BusinessLocalsMetaData businessLocals = sessionBean.getBusinessLocals();
+      BusinessRemotesMetaData businessRemotes = sessionBean.getBusinessRemotes();
+
+      if(businessLocals != null)
+      {
+         for(String businessInterface : businessLocals)
+         {
+            String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessInterface);
+            if(jndiName != null)
+               jndiNames.add(jndiName);
+         }
+      }
+      if(businessRemotes != null)
+      {
+         for(String businessInterface : businessRemotes)
+         {
+            String jndiName = jndiNameResolver.resolveJNDIName(sessionBean, businessInterface);
+            if(jndiName != null)
+               jndiNames.add(jndiName);
+         }
+      }
+      return jndiNames;
+   }
 
    private void setupInjectors(DeploymentUnit unit, AOPBasedSingletonContainer container, InjectionManager injectionManager, Barrier switchBoard)
    {

@@ -21,24 +21,6 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
-import javax.ejb.DependsOn;
-import javax.ejb.EJBException;
-import javax.ejb.Handle;
-import javax.ejb.Timer;
-import javax.naming.Context;
-import javax.naming.NamingException;
-
 import org.jboss.aop.Advisor;
 import org.jboss.aop.Domain;
 import org.jboss.aop.MethodInfo;
@@ -84,6 +66,24 @@ import org.jboss.reloaded.naming.CurrentComponent;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 import org.jboss.wsf.spi.invocation.integration.InvocationContextCallback;
 import org.jboss.wsf.spi.invocation.integration.ServiceEndpointContainer;
+
+import javax.ejb.DependsOn;
+import javax.ejb.EJBException;
+import javax.ejb.Handle;
+import javax.ejb.Timer;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import java.io.Serializable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * <p>
@@ -138,6 +138,8 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     */
    private List<EJBContainer> iDependOnSingletonBeanContainers;
    
+   private Collection<String> jndiNames;
+
    /**
     * Returns the AOP domain name which this container uses
     * for AOP based processing
@@ -148,32 +150,24 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       return "Singleton Bean";
    }
 
-   /**
-    * @param cl
-    * @param beanClassName
-    * @param ejbName
-    * @param domain
-    * @param ctxProperties
-    * @param deployment
-    * @param beanMetaData
-    * @throws ClassNotFoundException
-    */
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du, ExecutorService asyncExecutorService)
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, DeploymentUnit du, ExecutorService asyncExecutorService, Collection<String> jndiNames)
          throws ClassNotFoundException
    {
-      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
+      this(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService, jndiNames);
       this.deploymentUnit = du;
 
    }
 
    public AOPBasedSingletonContainer(ClassLoader cl, String beanClassName, String ejbName, Domain domain,
-         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService) throws ClassNotFoundException
+         Hashtable ctxProperties, JBossSessionBean31MetaData beanMetaData, ExecutorService asyncExecutorService, Collection<String> jndiNames) throws ClassNotFoundException
    {
       super(cl, beanClassName, ejbName, domain, ctxProperties, beanMetaData, asyncExecutorService);
       this.sessionBean31MetaData = beanMetaData;
       // HACK
       this.dependencyPolicy = new JBoss5DependencyPolicy(this);
+
+      this.jndiNames = jndiNames;
    }
 
    /**
@@ -249,6 +243,12 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
 
       // pass on the control to our simple singleton container
       this.delegate.start();
+   }
+
+   @Override
+   public boolean hasJNDIBinding(String jndiName)
+   {
+      return jndiNames.contains(jndiName);
    }
 
    /**
