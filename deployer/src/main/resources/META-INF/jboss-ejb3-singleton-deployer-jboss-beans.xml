@@ -8,7 +8,4 @@
     <!-- Binds various views of the Singleton bean into JNDI -->     
     <bean name="SingletonBeanJNDIBinderDeployer" class="org.jboss.ejb3.singleton.deployer.SingletonBeanJNDIBinderDeployer"/>
 
-    <!-- Creates an instance of @Startup @Singleton bean when the container is installed -->        
-    <bean name="StartupSingletonInitiator" class="org.jboss.ejb3.singleton.deployer.StartupSingletonInitiator"/>
-    
 </deployment>

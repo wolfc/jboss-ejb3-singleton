@@ -21,16 +21,16 @@
  */
 package org.jboss.ejb3.singleton.deployer;
 
-import org.jboss.beans.metadata.api.annotations.Install;
 import org.jboss.dependency.spi.ControllerState;
 import org.jboss.ejb3.container.spi.EJBContainer;
+import org.jboss.ejb3.container.spi.EJBInstanceManager;
+import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
 import org.jboss.logging.Logger;
 import org.jboss.metadata.ejb.jboss.JBossEnterpriseBeanMetaData;
 import org.jboss.metadata.ejb.jboss.JBossSessionBean31MetaData;
 
 /**
- * Responsible for creating the instance of a startup singleton bean,
- * when the corresponding {@link EJBContainer} reaches {@link ControllerState#INSTALLED}
+ * Responsible for creating the instance of a startup singleton bean
  *
  * @author Jaikiran Pai
  * @version $Revision: $
@@ -42,30 +42,88 @@ public class StartupSingletonInitiator
    private static Logger logger = Logger.getLogger(StartupSingletonInitiator.class);
    
    /**
+    * The EJB container of the @Startup @Singleton bean 
+    */
+   private EJBContainer container;
+   
+   /**
+    * 
+    * @param container The EJB container of the @Startup @Singleton bean
+    * @throws IllegalArgumentException If the passed <code>container</code> is null or if the <code>container</code>
+    *                                   doesn't correspond to a @Startup @Singleton bean
+    */
+   public StartupSingletonInitiator(EJBContainer container)
+   {
+      if (container == null)
+      {
+         throw new IllegalArgumentException("Container cannot be null while creating " + this.getClass().getName());
+      }
+      if (!this.isStartupSingletonBean(container.getMetaData()))
+      {
+         throw new IllegalArgumentException(container.getEJBName() + " is not a @Startup @Singleton bean");
+      }
+      
+      this.container = container;
+   }
+   
+   /**
     * Creates a instance of the EJB corresponding to the passed {@link EJBContainer},
     * if the EJB represents a startup singleton bean.
     * 
     * @param container The {@link EJBContainer} which reached the {@link ControllerState#INSTALLED} state
     */
-   @Install
-   public void onInstall(EJBContainer container)
+   public void start()
    {
-      // get the metadata
-      JBossEnterpriseBeanMetaData metadata = container.getMetaData();
-      // if it's not a session bean, then we don't have anything to do
-      if (!metadata.isSession() || !(metadata instanceof JBossSessionBean31MetaData))
-      {
-         return;
-      }
-      JBossSessionBean31MetaData sessionBean31 = (JBossSessionBean31MetaData) metadata;
-      // if it's not a @Startup @Singleton bean, then we don't have anything to do
-      if(!sessionBean31.isSingleton() || !sessionBean31.isInitOnStartup())
-      {
-         return;
-      }
       // create the instance
-      container.getBeanInstanceManager().create();
-      
-      logger.debug("Created an instance of @Startup @Singleton bean: " + sessionBean31.getEjbName());
+      EJBInstanceManager instanceManager = this.container.getBeanInstanceManager();
+      if (instanceManager instanceof SingletonEJBInstanceManager)
+      {
+         SingletonEJBInstanceManager singletonBeanInstanceManager = (SingletonEJBInstanceManager) instanceManager;
+         // get the instance (Note: don't call create, since create() throws an exception
+         // if a singleton instance is already created)
+         singletonBeanInstanceManager.get();
+      }
+      else
+      {
+         // fallback on the create() method (instead of get() on SingletonEJBInstanceManager) of the EJBInstanceManager
+         instanceManager.create();
+      }
+      logger.debug("Created an instance of @Startup @Singleton bean: " + this.container.getEJBName());
+   }
+   
+   /**
+    * Returns true if the passed {@link JBossEnterpriseBeanMetaData bean metadata} corresponds to a
+    * singleton startup bean. Else returns false
+    * 
+    * @param enterpriseBean The bean metadata.
+    * @return
+    */
+   private boolean isStartupSingletonBean(JBossEnterpriseBeanMetaData enterpriseBean)
+   {
+      if (!enterpriseBean.getJBossMetaData().isEJB31())
+      {
+         // since Singleton are only available starting 3.1 version
+         return false;
+      }
+      // we only process @Singleton session beans
+      if (!enterpriseBean.isSession())
+      {
+         return false;
+      }
+      // (ugly) check
+      if (!(enterpriseBean instanceof JBossSessionBean31MetaData))
+      {
+         return false;
+      }
+      JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) enterpriseBean;
+      if (!sessionBean.isSingleton())
+      {
+         return false;
+      }
+      if (!sessionBean.isInitOnStartup())
+      {
+         return false;
+      }
+      return true;
    }
 }

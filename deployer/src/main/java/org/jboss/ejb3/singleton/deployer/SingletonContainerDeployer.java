@@ -32,7 +32,6 @@ import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.beans.metadata.api.annotations.Inject;
-import org.jboss.beans.metadata.plugins.AbstractDemandMetaData;
 import org.jboss.beans.metadata.plugins.AbstractInjectionValueMetaData;
 import org.jboss.beans.metadata.plugins.AbstractListMetaData;
 import org.jboss.beans.metadata.plugins.builder.BeanMetaDataBuilderFactory;
@@ -103,8 +102,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
          DeploymentVisitor<JBossEnterpriseBeanMetaData>
 {
 
-   static final String IS_STARTUP_SINGLETON_PRESENT_IN_DU = "org.jboss.ejb3.singleton.deployer.startup_singleton_present";
-   
    /**
     * Logger
     */
@@ -182,18 +179,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       }
       
       // now start with actual processing
-      JBossSessionBean31MetaData sessionBean = (JBossSessionBean31MetaData) beanMetaData;
-
-      // Add a flag to indicate that this deployment has a @Startup @Singleton. Note that 
-      // the flag is added to the top level unit of this DU (since StartupSingletonInitiatorDeployer 
-      // processes only top level DUs)
-      // This flag is added for optimization, so that the StartupSingletonInitiatorDeployer
-      // (which is a bit expensive) can only pick up relevant deployments and ignore the rest
-      if (sessionBean.isInitOnStartup())
-      {
-         DeploymentUnit topLevelUnit = unit.getTopLevel();
-         topLevelUnit.addAttachment(IS_STARTUP_SINGLETON_PRESENT_IN_DU, Boolean.TRUE);
-      }
+      JBossSessionBean31MetaData singletonBean = (JBossSessionBean31MetaData) beanMetaData;
 
       // Create a singleton container
       ClassLoader classLoader = unit.getClassLoader();
@@ -208,8 +194,8 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       AOPBasedSingletonContainer singletonContainer;
       try
       {
-         singletonContainer = new AOPBasedSingletonContainer(classLoader, sessionBean.getEjbClass(), sessionBean
-               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, sessionBean, unit, asyncExecutorService);
+         singletonContainer = new AOPBasedSingletonContainer(classLoader, singletonBean.getEjbClass(), singletonBean
+               .getEjbName(), (Domain) singletonContainerAOPDomain.getManager(), ctxProperties, singletonBean, unit, asyncExecutorService);
       }
       catch (ClassNotFoundException cnfe)
       {
@@ -232,8 +218,14 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       singletonContainer.processMetadata();
 
       // attach the container to the deployment unit, with appropriate MC dependencies
-      this.installContainer(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
+      this.attachContainerBMD(unit, singletonContainer.getObjectName().getCanonicalName(), singletonContainer);
 
+      // 
+      if (singletonBean.isInitOnStartup())
+      {
+         StartupSingletonInitiator startupSingletonInitiator = new StartupSingletonInitiator(singletonContainer);
+         this.attachStartupSingletonInitiatorBMD(startupSingletonInitiator, singletonContainer, unit);
+      }
    }
 
    /**
@@ -328,7 +320,7 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
     * @param containerMCBeanName The MC bean name of the container
     * @param container The container being installed
     */
-   private void installContainer(DeploymentUnit unit, String containerMCBeanName, AOPBasedSingletonContainer container)
+   private void attachContainerBMD(DeploymentUnit unit, String containerMCBeanName, AOPBasedSingletonContainer container)
    {
       BeanMetaDataBuilder containerBMDBuilder = BeanMetaDataBuilder.createBuilder(containerMCBeanName, container
             .getClass().getName());
@@ -345,7 +337,6 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       }
       // add dependency on START (and not INSTALLED) state of Switchboard, since the container only requires a fully populated ENC context,
       // but doesn't require a invokable context. An invokable context is only needed by Injector.
-//      ((MCDependencyPolicy) containerDependencyPolicy).getdeaddDependency(this.createSwitchBoardDependency(switchBoard));
       containerBMDBuilder.addDemand(switchBoard.getId(), ControllerState.CREATE, ControllerState.START, null);
       logger.debug("Added dependency on switchboard " + switchBoard.getId() + " for container " + container.getName());
       
@@ -711,17 +702,48 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       return builder.getBeanMetaData();
    }
    
-   private DemandMetaData createSwitchBoardDependency(Barrier switchBoard)
+   private void attachStartupSingletonInitiatorBMD(StartupSingletonInitiator startupSingletonInitiator, EJBContainer container, DeploymentUnit unit)
    {
-      AbstractDemandMetaData switchboardDependency = new AbstractDemandMetaData();
-      switchboardDependency.setDemand(switchBoard.getId());
-      switchboardDependency.setWhenRequired(ControllerState.CREATE);
-      // container requires only a populated ENC (== START state of switchboard)
-      switchboardDependency.setTargetState(ControllerState.START);
-
-      return switchboardDependency;
+      String initiatorName = this.getStartupSingletonInitiatorMCBeanName(unit, container);
+      BeanMetaDataBuilder builder = BeanMetaDataBuilderFactory.createBuilder(initiatorName, startupSingletonInitiator.getClass().getName());
+      builder.setConstructorValue(startupSingletonInitiator);
+      
+      // Add dependency on switchboard
+      Barrier switchBoard = unit.getAttachment(Barrier.class);
+      // the container cannot function without an SwitchBoard Barrier
+      if (switchBoard == null)
+      {
+         throw new RuntimeException("No SwitchBoard Barrier in unit: " + unit);
+      }
+      // add dependency on INSTALLED state (i.e. fully populated and invokable ENC) SwitchBoard 
+      builder.addDemand(switchBoard.getId(), ControllerState.CREATE, ControllerState.INSTALLED, null);
+      
+      if (unit.isComponent())
+      {
+         // Attach it to parent since we are processing a component DU and BeanMetaDataDeployer doesn't
+         // pick up BeanMetaData from component DU
+         unit.getParent().addAttachment(BeanMetaData.class + ":" + initiatorName, builder.getBeanMetaData());
+      }
+      else
+      {
+         unit.addAttachment(BeanMetaData.class + ":" + initiatorName, builder.getBeanMetaData());
+      }
    }
 
+   private String getStartupSingletonInitiatorMCBeanName(DeploymentUnit unit, EJBContainer container)
+   {
+      StringBuilder sb = new StringBuilder("startup-singleton-initiator:");
+      org.jboss.deployers.structure.spi.DeploymentUnit topLevelUnit = unit.isTopLevel() ? unit : unit.getTopLevel();
+      sb.append("topLevelUnit=");
+      sb.append(topLevelUnit.getSimpleName());
+      sb.append(",unit=");
+      sb.append(unit.getSimpleName());
+      sb.append(",bean=");
+      sb.append(container.getEJBName());
+      
+      return sb.toString();
+   }
+   
    /**
     * Returns the prefix for the MC bean name, for a {@link Injector injector}
     * 
