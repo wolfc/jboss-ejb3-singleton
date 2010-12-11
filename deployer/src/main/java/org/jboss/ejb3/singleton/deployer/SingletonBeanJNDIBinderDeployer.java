@@ -462,6 +462,7 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       // jndi binder binds the proxies, they will be ready to use (i.e. will be sure that
       // the container is available for invocation).
       builder.addDemand(containerName, ControllerState.START, ControllerState.START, null);
+      builder.addSupply("jndi:" + jndiBinder.getJNDIName());
       return builder.getBeanMetaData();
 
    }

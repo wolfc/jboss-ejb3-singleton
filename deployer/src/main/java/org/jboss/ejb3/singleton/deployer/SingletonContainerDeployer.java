@@ -32,6 +32,7 @@ import org.jboss.aop.AspectManager;
 import org.jboss.aop.Domain;
 import org.jboss.aop.DomainDefinition;
 import org.jboss.beans.metadata.api.annotations.Inject;
+import org.jboss.beans.metadata.plugins.AbstractDemandMetaData;
 import org.jboss.beans.metadata.plugins.AbstractInjectionValueMetaData;
 import org.jboss.beans.metadata.plugins.AbstractListMetaData;
 import org.jboss.beans.metadata.plugins.builder.BeanMetaDataBuilderFactory;
@@ -40,6 +41,7 @@ import org.jboss.beans.metadata.spi.DemandMetaData;
 import org.jboss.beans.metadata.spi.DependencyMetaData;
 import org.jboss.beans.metadata.spi.SupplyMetaData;
 import org.jboss.beans.metadata.spi.builder.BeanMetaDataBuilder;
+import org.jboss.dependency.spi.ControllerState;
 import org.jboss.deployers.spi.DeploymentException;
 import org.jboss.deployers.spi.deployer.helpers.AbstractRealDeployerWithInput;
 import org.jboss.deployers.spi.deployer.helpers.DeploymentVisitor;
@@ -341,7 +343,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       {
          throw new RuntimeException("No SwitchBoard Barrier found for bean: " + container.getEjbName() + " in unit: " + unit);
       }
-      containerDependencyPolicy.addDependency(switchBoard.getId());
+      // add dependency on START (and not INSTALLED) state of Switchboard, since the container only requires a fully populated ENC context,
+      // but doesn't require a invokable context. An invokable context is only needed by Injector.
+//      ((MCDependencyPolicy) containerDependencyPolicy).getdeaddDependency(this.createSwitchBoardDependency(switchBoard));
+      containerBMDBuilder.addDemand(switchBoard.getId(), ControllerState.CREATE, ControllerState.START, null);
       logger.debug("Added dependency on switchboard " + switchBoard.getId() + " for container " + container.getName());
       
       InjectionManager injectionManager = unit.getAttachment(InjectionManager.class);
@@ -699,13 +704,23 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       BeanMetaDataBuilder builder = BeanMetaDataBuilderFactory.createBuilder(injectorMCBeanName, injector.getClass().getName());
       builder.setConstructorValue(injector);
 
-      // add dependency on INSTALLED state of SwitchBoard Barrier
-      builder.addDependency(barrier.getId());
+      // add dependency on SwitchBoard barrier
+      builder.addDemand(barrier.getId(), ControllerState.CREATE, ControllerState.START, null);
 
       // return the Injector BMD
       return builder.getBeanMetaData();
    }
    
+   private DemandMetaData createSwitchBoardDependency(Barrier switchBoard)
+   {
+      AbstractDemandMetaData switchboardDependency = new AbstractDemandMetaData();
+      switchboardDependency.setDemand(switchBoard.getId());
+      switchboardDependency.setWhenRequired(ControllerState.CREATE);
+      // container requires only a populated ENC (== START state of switchboard)
+      switchboardDependency.setTargetState(ControllerState.START);
+
+      return switchboardDependency;
+   }
 
    /**
     * Returns the prefix for the MC bean name, for a {@link Injector injector}
