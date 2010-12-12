@@ -708,6 +708,10 @@ public class SingletonContainerDeployer extends AbstractRealDeployerWithInput<JB
       BeanMetaDataBuilder builder = BeanMetaDataBuilderFactory.createBuilder(initiatorName, startupSingletonInitiator.getClass().getName());
       builder.setConstructorValue(startupSingletonInitiator);
       
+      // Add dependency on container
+      String containerName = container.getMetaData().getContainerName();
+      builder.addDependency(containerName);
+      
       // Add dependency on switchboard
       Barrier switchBoard = unit.getAttachment(Barrier.class);
       // the container cannot function without an SwitchBoard Barrier
