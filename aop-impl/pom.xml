@@ -1,235 +1,230 @@
 <?xml version="1.0" encoding="UTF-8"?>
-    <!--
-    vi:ts=2:sw=2:expandtab:
-    -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+   <parent>
+      <groupId>org.jboss.ejb3.singleton</groupId>
+      <artifactId>jboss-ejb3-singleton-parent</artifactId>
+      <version>1.0.0-alpha-25-SNAPSHOT</version>
+      <relativePath>../pom.xml</relativePath>
+   </parent>
 
+   <!-- Model Information -->
+   <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.jboss.ejb3.singleton</groupId>
-        <artifactId>jboss-ejb3-singleton-parent</artifactId>
-        <version>1.0.0-alpha-25-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
-    
-    <!-- Model Information -->
-    <modelVersion>4.0.0</modelVersion>
+   <!-- Artifact Information  -->
+   <groupId>org.jboss.ejb3.singleton</groupId>
+   <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
+   <packaging>jar</packaging>
+   <name>JBoss EJB3.1 @Singleton container AOP implementation</name>
+   <url>http://www.jboss.org</url>
+   <description>An AOP based (delegating) implementation of the singleton container</description>
 
-    <!-- Artifact Information  -->
-    <groupId>org.jboss.ejb3.singleton</groupId>
-    <artifactId>jboss-ejb3-singleton-aop-impl</artifactId>
-    <packaging>jar</packaging>
-    <name>JBoss EJB3.1 @Singleton container AOP implementation</name>
-    <url>http://www.jboss.org</url>
-    <description>An AOP based (delegating) implementation of the singleton container</description>
-    
-    <properties>
-	    <version.ejb3.core>1.7.10</version.ejb3.core>
-        <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
-        <version.reloaded.naming>0.2.0</version.reloaded.naming>
-        <version.timerservice.spi>1.0.4</version.timerservice.spi> 
-        <version.org.jboss.ejb3.ejbref.resolver>1.0.0-alpha-1</version.org.jboss.ejb3.ejbref.resolver>       
-        <version.org.jboss.ejb3.effigy>0.1.0</version.org.jboss.ejb3.effigy>
-        <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4</version.org.jboss.ejb3.instantiator>
-        <version.org.jboss.ejb3.async>1.0.0-alpha-7</version.org.jboss.ejb3.async>
-    </properties>
-    
-    <build>
-        <plugins>
-            <!-- Assembly Plugin -->
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.2-beta-4</version>
-                <executions>
-                    <!--  Build singleton aop "package" -->
-                  <execution>
-                    <id>build-singleton-aop-package</id> 
-                    <phase>package</phase>
-                    <goals>
-                      <goal>single</goal>
-                    </goals>
-                  </execution>
-                </executions>
-                <configuration>
-                  <descriptors>
-                    <descriptor>src/assembly/package-assembler.xml</descriptor>
-                  </descriptors>
-                </configuration>
-            </plugin>
-        </plugins>
-    
-    </build>
-    
-    <dependencies>
-        <dependency>
-            <groupId>org.jboss.ejb3.ejbref.resolver</groupId>
-            <artifactId>ejbref-resolver-spi</artifactId>
-            <version>${version.org.jboss.ejb3.ejbref.resolver}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.jboss.ejb3.singleton</groupId>
-            <artifactId>jboss-ejb3-singleton-impl</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+   <properties>
+      <version.ejb3.core>1.7.10</version.ejb3.core>
+      <version.ejb3.concurrency>1.0.0-alpha-1</version.ejb3.concurrency>
+      <version.reloaded.naming>0.2.0</version.reloaded.naming>
+      <version.timerservice.spi>1.0.4</version.timerservice.spi>
+      <version.org.jboss.ejb3.ejbref.resolver>1.0.0-alpha-1</version.org.jboss.ejb3.ejbref.resolver>
+      <version.org.jboss.ejb3.effigy>0.1.0</version.org.jboss.ejb3.effigy>
+      <version.org.jboss.ejb3.instantiator>1.0.0-alpha-4</version.org.jboss.ejb3.instantiator>
+      <version.org.jboss.ejb3.async>1.0.0-alpha-7</version.org.jboss.ejb3.async>
+   </properties>
 
-	<dependency>
-		<groupId>org.jboss.ejb3</groupId>
-		<artifactId>jboss-ejb3-core</artifactId>
-		<version>${version.ejb3.core}</version>
-        <exclusions>
+   <build>
+      <plugins>
+         <!-- Assembly Plugin -->
+         <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.2-beta-4</version>
+            <executions>
+               <!--  Build singleton aop "package" -->
+               <execution>
+                  <id>build-singleton-aop-package</id>
+                  <phase>package</phase>
+                  <goals>
+                     <goal>single</goal>
+                  </goals>
+               </execution>
+            </executions>
+            <configuration>
+               <descriptors>
+                  <descriptor>src/assembly/package-assembler.xml</descriptor>
+               </descriptors>
+            </configuration>
+         </plugin>
+      </plugins>
+
+   </build>
+
+   <dependencies>
+      <dependency>
+         <groupId>org.jboss.ejb3.ejbref.resolver</groupId>
+         <artifactId>ejbref-resolver-spi</artifactId>
+         <version>${version.org.jboss.ejb3.ejbref.resolver}</version>
+      </dependency>
+
+      <dependency>
+         <groupId>org.jboss.ejb3.singleton</groupId>
+         <artifactId>jboss-ejb3-singleton-impl</artifactId>
+         <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+         <groupId>org.jboss.ejb3</groupId>
+         <artifactId>jboss-ejb3-core</artifactId>
+         <version>${version.ejb3.core}</version>
+         <exclusions>
             <exclusion>
-                <groupId>org.jboss.metadata</groupId>
-                <artifactId>jboss-metadata</artifactId>
+               <groupId>org.jboss.metadata</groupId>
+               <artifactId>jboss-metadata</artifactId>
             </exclusion>
-        </exclusions>
-	</dependency>
+         </exclusions>
+      </dependency>
 
-    <dependency>
-      <groupId>org.jboss.ejb3.async</groupId>
-      <artifactId>jboss-ejb3-async-impl</artifactId>
-      <version>${version.org.jboss.ejb3.async}</version>
-      <scope>test</scope>
-    </dependency>
-    
-    <!-- Naming -->
-        <dependency>
-            <groupId>org.jboss.reloaded.naming</groupId>
-            <artifactId>jboss-reloaded-naming-spi</artifactId>
-            <version>${version.reloaded.naming}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.jboss.reloaded.naming</groupId>
-            <artifactId>jboss-reloaded-naming-deployers</artifactId>
-            <version>${version.reloaded.naming}</version>
-        </dependency>
-    
-    <!--  EJB metadata -->
-    <dependency>
-        <groupId>org.jboss.metadata</groupId>
-        <artifactId>jboss-metadata-ejb</artifactId>
-    </dependency>
-    
-    <!-- Get rid of this! it's required for ServiceMBeanSupport class
-            which is being extended by EJB3Deployment -->
-        <dependency>
-          <groupId>org.jboss.jbossas</groupId>
-          <artifactId>jboss-as-system-jmx</artifactId>
-          <version>5.1.0.GA</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jboss.microcontainer</groupId>
-                    <artifactId>jboss-kernel</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jboss.man</groupId>
-                    <artifactId>jboss-managed</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jboss.man</groupId>
-                    <artifactId>jboss-metatype</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jboss</groupId>
-                    <artifactId>jboss-vfs</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+      <dependency>
+         <groupId>org.jboss.ejb3.async</groupId>
+         <artifactId>jboss-ejb3-async-impl</artifactId>
+         <version>${version.org.jboss.ejb3.async}</version>
+         <scope>test</scope>
+      </dependency>
 
-        
-        <!-- ***************************** -->
-        <!--  Test dependencies -->
-        <!-- ***************************** -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
+      <!-- Naming -->
+      <dependency>
+         <groupId>org.jboss.reloaded.naming</groupId>
+         <artifactId>jboss-reloaded-naming-spi</artifactId>
+         <version>${version.reloaded.naming}</version>
+      </dependency>
 
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-core</artifactId>
-			<version>1.8.4</version>
-			<scope>test</scope>
-		</dependency>
-        
-        
-        <!-- this needs to be removed - EJBTHREE-1343 -->
-        <dependency>
-          <groupId>org.jboss.jbossas</groupId>
-          <artifactId>jboss-as-server</artifactId>
-          <version>5.1.0.GA</version>
-          <exclusions>
+      <dependency>
+         <groupId>org.jboss.reloaded.naming</groupId>
+         <artifactId>jboss-reloaded-naming-deployers</artifactId>
+         <version>${version.reloaded.naming}</version>
+      </dependency>
+
+      <!--  EJB metadata -->
+      <dependency>
+         <groupId>org.jboss.metadata</groupId>
+         <artifactId>jboss-metadata-ejb</artifactId>
+      </dependency>
+
+      <!-- Get rid of this! it's required for ServiceMBeanSupport class
+which is being extended by EJB3Deployment -->
+      <dependency>
+         <groupId>org.jboss.jbossas</groupId>
+         <artifactId>jboss-as-system-jmx</artifactId>
+         <version>5.1.0.GA</version>
+         <exclusions>
             <exclusion>
-              <groupId>jboss</groupId>
-              <artifactId>jboss-remoting</artifactId>
+               <groupId>org.jboss.microcontainer</groupId>
+               <artifactId>jboss-kernel</artifactId>
+            </exclusion>
+            <exclusion>
+               <groupId>org.jboss.man</groupId>
+               <artifactId>jboss-managed</artifactId>
+            </exclusion>
+            <exclusion>
+               <groupId>org.jboss.man</groupId>
+               <artifactId>jboss-metatype</artifactId>
+            </exclusion>
+            <exclusion>
+               <groupId>org.jboss</groupId>
+               <artifactId>jboss-vfs</artifactId>
+            </exclusion>
+         </exclusions>
+      </dependency>
+
+
+      <!-- ***************************** -->
+      <!--  Test dependencies -->
+      <!-- ***************************** -->
+      <dependency>
+         <groupId>junit</groupId>
+         <artifactId>junit</artifactId>
+      </dependency>
+
+      <dependency>
+         <groupId>org.mockito</groupId>
+         <artifactId>mockito-core</artifactId>
+         <version>1.8.4</version>
+         <scope>test</scope>
+      </dependency>
+
+
+      <!-- this needs to be removed - EJBTHREE-1343 -->
+      <dependency>
+         <groupId>org.jboss.jbossas</groupId>
+         <artifactId>jboss-as-server</artifactId>
+         <version>5.1.0.GA</version>
+         <exclusions>
+            <exclusion>
+               <groupId>jboss</groupId>
+               <artifactId>jboss-remoting</artifactId>
             </exclusion>
             <!-- jboss-as-server must not dictate the JPA API -->
             <exclusion>
-              <groupId>org.hibernate</groupId>
-              <artifactId>ejb3-persistence</artifactId>
+               <groupId>org.hibernate</groupId>
+               <artifactId>ejb3-persistence</artifactId>
             </exclusion>
             <exclusion>
-              <groupId>org.jboss</groupId>
-              <artifactId>jboss-metadata</artifactId>
+               <groupId>org.jboss</groupId>
+               <artifactId>jboss-metadata</artifactId>
             </exclusion>
             <exclusion>
-              <groupId>org.jboss.jbossas</groupId>
-              <artifactId>jboss-as-security</artifactId>
+               <groupId>org.jboss.jbossas</groupId>
+               <artifactId>jboss-as-security</artifactId>
             </exclusion>
             <!-- Conflicts with org.jboss.security:jbosssx -->
             <exclusion>
-              <groupId>org.jboss.security</groupId>
-              <artifactId>jbosssx-client</artifactId>
+               <groupId>org.jboss.security</groupId>
+               <artifactId>jbosssx-client</artifactId>
             </exclusion>
             <exclusion>
-              <groupId>org.jboss.ws.native</groupId>
-              <artifactId>jbossws-native-jaxws</artifactId>
+               <groupId>org.jboss.ws.native</groupId>
+               <artifactId>jbossws-native-jaxws</artifactId>
             </exclusion>
-          </exclusions>
-          <scope>test</scope>
-        </dependency>
-        
-        <dependency>
-          <groupId>org.jboss.ejb3.effigy</groupId>
-          <artifactId>jboss-ejb3-effigy-common</artifactId>
-          <version>${version.org.jboss.ejb3.effigy}</version>
-          <scope>test</scope>
-        </dependency>
+         </exclusions>
+         <scope>test</scope>
+      </dependency>
 
-        <dependency>
-          <groupId>org.jboss.ejb3.effigy</groupId>
-          <artifactId>jboss-ejb3-effigy-int1</artifactId>
-          <version>${version.org.jboss.ejb3.effigy}</version>
-          <scope>test</scope>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.jboss.ejb3.instantiator</groupId>
-            <artifactId>jboss-ejb3-instantiator-impl</artifactId>
-            <version>${version.org.jboss.ejb3.instantiator}</version>
-            <scope>test</scope>
-        </dependency>
-        
-        <!-- ***************************** -->
-        <!--  Runtime dependencies -->
-        <!-- ***************************** -->
-    
-    
-        <!--  We use the concurrency AOP interceptor from this artifact -->
-        <dependency>
-            <groupId>org.jboss.ejb3.concurrency</groupId>
-            <artifactId>jboss-ejb3-concurrency-aop</artifactId>
-            <version>${version.ejb3.concurrency}</version>
-            <scope>runtime</scope>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.jboss.ejb3.timeout</groupId>
-            <artifactId>jboss-ejb3-timeout-3.0</artifactId>
-            <version>0.1.1</version>
-            <scope>runtime</scope>
-        </dependency>
-    </dependencies>
+      <dependency>
+         <groupId>org.jboss.ejb3.effigy</groupId>
+         <artifactId>jboss-ejb3-effigy-common</artifactId>
+         <version>${version.org.jboss.ejb3.effigy}</version>
+         <scope>test</scope>
+      </dependency>
 
+      <dependency>
+         <groupId>org.jboss.ejb3.effigy</groupId>
+         <artifactId>jboss-ejb3-effigy-int1</artifactId>
+         <version>${version.org.jboss.ejb3.effigy}</version>
+         <scope>test</scope>
+      </dependency>
+
+      <dependency>
+         <groupId>org.jboss.ejb3.instantiator</groupId>
+         <artifactId>jboss-ejb3-instantiator-impl</artifactId>
+         <version>${version.org.jboss.ejb3.instantiator}</version>
+         <scope>test</scope>
+      </dependency>
+
+      <!-- ***************************** -->
+      <!--  Runtime dependencies -->
+      <!-- ***************************** -->
+
+
+      <!--  We use the concurrency AOP interceptor from this artifact -->
+      <dependency>
+         <groupId>org.jboss.ejb3.concurrency</groupId>
+         <artifactId>jboss-ejb3-concurrency-aop</artifactId>
+         <version>${version.ejb3.concurrency}</version>
+         <scope>runtime</scope>
+      </dependency>
+
+      <dependency>
+         <groupId>org.jboss.ejb3.timeout</groupId>
+         <artifactId>jboss-ejb3-timeout-3.0</artifactId>
+         <version>0.1.1</version>
+         <scope>runtime</scope>
+      </dependency>
+   </dependencies>
 </project>	
