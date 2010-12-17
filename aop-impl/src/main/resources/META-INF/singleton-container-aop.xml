@@ -14,6 +14,18 @@
     
    <domain name="Singleton Bean" extends="Intercepted Bean" inheritBindings="true">
 
+      <!-- Because of a bug in org.jboss.aop.microcontainer.beans.metadata.StackBeanMetaDataFactory (unscoped stack name)
+           we must define a stack with a different name. -->
+      <stack name="SingletonLifecycleCallbackStack">
+         <interceptor-ref name="org.jboss.aspects.currentinvocation.CurrentInvocationInterceptor"/>
+         <advice name="setup" aspect="InvocationContextInterceptor"/>
+         <interceptor-ref name="CurrentInvocationContextInterceptor"/>
+         <interceptor-ref name="org.jboss.aspects.tx.TxPropagationInterceptor"/>
+         <interceptor-ref name="CMTTx"/>
+         <interceptor-ref name="org.jboss.ejb3.tx.BMTTxInterceptorFactory"/>
+         <interceptor-ref name="org.jboss.ejb3.entity.TransactionScopedEntityManagerInterceptor"/>
+      </stack>
+
       <bind pointcut="execution(public * *->*(..))">
          <interceptor-ref name="org.jboss.ejb3.ENCPropagationInterceptor"/>
          <interceptor-ref name="org.jboss.ejb3.async.impl.interceptor.AsynchronousInterceptorFactory"/>

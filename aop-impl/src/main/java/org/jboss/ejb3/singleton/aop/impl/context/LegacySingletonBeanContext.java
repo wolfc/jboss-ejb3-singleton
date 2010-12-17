@@ -21,10 +21,7 @@
 */
 package org.jboss.ejb3.singleton.aop.impl.context;
 
-import java.io.Serializable;
-
 import org.jboss.ejb3.container.spi.BeanContext;
-import org.jboss.ejb3.container.spi.EJBContainer;
 import org.jboss.ejb3.context.base.BaseSessionInvocationContext;
 import org.jboss.ejb3.context.spi.EJBContext;
 import org.jboss.ejb3.context.spi.SessionInvocationContext;
@@ -32,6 +29,8 @@ import org.jboss.ejb3.session.SessionSpecBeanContext;
 import org.jboss.ejb3.singleton.aop.impl.AOPBasedSingletonContainer;
 import org.jboss.ejb3.timerservice.spi.TimerServiceInvocationContext;
 import org.jboss.logging.Logger;
+
+import java.io.Serializable;
 
 /**
  * LegacySingletonBeanContext
@@ -89,7 +88,7 @@ public class LegacySingletonBeanContext extends SessionSpecBeanContext<AOPBasedS
     * @see org.jboss.ejb3.container.spi.BeanContext#getEJBContainer()
     */
    @Override
-   public EJBContainer getEJBContainer()
+   public AOPBasedSingletonContainer getEJBContainer()
    {
       return this.aopBasedSingletonContainer;
    }

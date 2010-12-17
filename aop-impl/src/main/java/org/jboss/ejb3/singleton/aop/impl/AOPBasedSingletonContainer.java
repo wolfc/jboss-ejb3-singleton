@@ -21,24 +21,6 @@
 */
 package org.jboss.ejb3.singleton.aop.impl;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
-import javax.ejb.DependsOn;
-import javax.ejb.EJBException;
-import javax.ejb.Handle;
-import javax.ejb.Timer;
-import javax.naming.Context;
-import javax.naming.NamingException;
-
 import org.jboss.aop.Advisor;
 import org.jboss.aop.Domain;
 import org.jboss.aop.MethodInfo;
@@ -62,6 +44,7 @@ import org.jboss.ejb3.container.spi.lifecycle.EJBLifecycleHandler;
 import org.jboss.ejb3.deployers.JBoss5DependencyPolicy;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReference;
 import org.jboss.ejb3.ejbref.resolver.spi.EjbReferenceResolver;
+import org.jboss.ejb3.interceptors.container.LifecycleMethodInterceptorsInvocation;
 import org.jboss.ejb3.metadata.annotation.AnnotationRepositoryToMetaData;
 import org.jboss.ejb3.proxy.impl.jndiregistrar.JndiSessionRegistrarBase;
 import org.jboss.ejb3.proxy.impl.remoting.SessionSpecRemotingMetadata;
@@ -70,6 +53,7 @@ import org.jboss.ejb3.session.SessionSpecContainer;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.AccessTimeoutMetaDataBridge;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.ConcurrencyTypeMetaDataBridge;
 import org.jboss.ejb3.singleton.aop.impl.concurrency.bridge.LockMetaDataBridge;
+import org.jboss.ejb3.singleton.aop.impl.context.LegacySingletonBeanContext;
 import org.jboss.ejb3.singleton.impl.container.SingletonContainer;
 import org.jboss.ejb3.singleton.spi.SingletonEJBInstanceManager;
 import org.jboss.ejb3.timerservice.spi.MultiTimeoutMethodTimedObjectInvoker;
@@ -84,6 +68,25 @@ import org.jboss.reloaded.naming.CurrentComponent;
 import org.jboss.reloaded.naming.spi.JavaEEComponent;
 import org.jboss.wsf.spi.invocation.integration.InvocationContextCallback;
 import org.jboss.wsf.spi.invocation.integration.ServiceEndpointContainer;
+
+import javax.ejb.DependsOn;
+import javax.ejb.EJBException;
+import javax.ejb.Handle;
+import javax.ejb.Timer;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * <p>
@@ -139,6 +142,12 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    private List<EJBContainer> iDependOnSingletonBeanContainers;
    
    /**
+    * Maintains a array of interceptors applicable to this bean context
+    * for each of the lifecycle callbacks
+    */
+   protected Map<Class<? extends Annotation>, Interceptor[]> lifecycleCallbackInterceptors = new HashMap<Class<? extends Annotation>, Interceptor[]>();
+   
+   /**
     * Returns the AOP domain name which this container uses
     * for AOP based processing
     * @return
@@ -154,7 +163,6 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
     * @param ejbName
     * @param domain
     * @param ctxProperties
-    * @param deployment
     * @param beanMetaData
     * @throws ClassNotFoundException
     */
@@ -360,7 +368,7 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    }
 
    /**
-    * @see org.jboss.ejb3.session.SessionContainer#createSession(java.lang.Class<?>[], java.lang.Object[])
+    * @see org.jboss.ejb3.session.SessionContainer#createSession(java.lang.Class[], java.lang.Object[])
     */
    @Override
    public Serializable createSession(Class<?>[] initParameterTypes, Object[] initParameterValues)
@@ -988,7 +996,46 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
       String containerName = this.getObjectName() != null ? this.getObjectName().getCanonicalName() : null;
       return containerName;
    }
-   
+
+   /**
+    * Returns the interceptor instances (which is a combination of our internal
+    * AOP interceptors and bean developer defined {@link javax.interceptor.Interceptors}),
+    * corresponding to the <code>lifecycleCallbackAnnotation</code>.
+    *
+    * Internally caches the interceptor instances corresponding to each of the lifecycle
+    * callbacks, for this bean context
+    *
+    * @param lifecycleCallbackAnnotation Lifecycle callback annotations like {@link javax.ejb.PrePassivate},
+    *       {@link javax.ejb.PostActivate}, {@link javax.annotation.PreDestroy}, {@link javax.annotation.PostConstruct}
+    *
+    * @return Returns an empty array if there are no interceptor instances associated with this
+    *       bean context, for the <code>lifecycleCallbackAnnotation</code>. Else, returns the
+    *       array of interceptors applicable to this bean context for the
+    *       <code>lifecycleCallbackAnnotation</code>
+    */
+   protected Interceptor[] getLifecycleInterceptors(Class<? extends Annotation> lifecycleCallbackAnnotation)
+   {
+      Interceptor[] interceptors = this.lifecycleCallbackInterceptors.get(lifecycleCallbackAnnotation);
+      // If null then we haven't yet initialized the lifecycle callback interceptors, since
+      // we intentionally do a lazy initialization per lifecycle callback. The initialization
+      // happens only once per bean for each lifecycle callback annotation type
+      if (interceptors == null)
+      {
+         List<Class<?>> lifecycleInterceptorClasses = this.getBeanContainer().getInterceptorRegistry().getLifecycleInterceptorClasses();
+         // create the interceptor chain
+         interceptors = LifecycleCallbacks.createLifecycleCallbackInterceptors(this.getAdvisor(), lifecycleInterceptorClasses, lifecycleCallbackAnnotation, "SingletonLifecycleCallbackStack");
+         if (interceptors == null)
+         {
+            // No interceptors available, so create an empty chain and maintain in the map,
+            // to avoid trying to init again the next time this method
+            // is called for this specific lifecycle callback
+            interceptors = new Interceptor[0];
+         }
+         this.lifecycleCallbackInterceptors.put(lifecycleCallbackAnnotation, interceptors);
+      }
+      return this.lifecycleCallbackInterceptors.get(lifecycleCallbackAnnotation);
+   }
+
    /**
     * {@inheritDoc}
     * @return
@@ -998,7 +1045,25 @@ public class AOPBasedSingletonContainer extends SessionSpecContainer implements 
    {
       return this.getBeanClass();
    }
-   
+
+   @Override
+   protected void invokeCallback(BeanContext<?> beanContext, Class<? extends Annotation> callbackAnnotationClass)
+   {
+      // normally we would invoke through the BeanContainer, however we want a different stack and
+      // we want to be able to use tx2 interceptors.
+      try
+      {
+         Interceptor interceptors[] = this.getLifecycleInterceptors(callbackAnnotationClass);
+         LifecycleMethodInterceptorsInvocation invocation = new SingletonLifecycleMethodInterceptorsInvocation((LegacySingletonBeanContext) beanContext, interceptors);
+         invocation.setAdvisor(this.getAdvisor());
+         invocation.invokeNext();
+      }
+      catch (Throwable t)
+      {
+         throw new RuntimeException(t);
+      }
+   }
+
    /**
     * {@inheritDoc}
     * 
