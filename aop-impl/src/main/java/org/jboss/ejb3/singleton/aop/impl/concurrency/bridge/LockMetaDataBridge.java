@@ -103,7 +103,19 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
       }
       ConcurrentMethodsMetaData concurrentMethods = sessionBean.getConcurrentMethods();
       if(concurrentMethods == null)
+      {
+         String declaringClass = method.getDeclaringClass();
+         if (sessionBean.isSingleton() && !sessionBean.getEjbClass().equals(declaringClass))
+         {
+            Lock lock = this.getLockAnnotationOnClass(declaringClass, classLoader);
+            if (lock == null)
+            {
+               lock = new LockImpl(LockType.WRITE);
+            }
+            return annotationClass.cast(lock);
+         }
          return null;
+      }
       // get the concurrency method metadata for this named method
       ConcurrentMethodMetaData concurrentMethodMetaData = concurrentMethods.find(namedMethod);
       LockType lockType = null;
@@ -118,6 +130,16 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
       // method "*"
       if (lockType == null)
       {
+         String declaringClass = method.getDeclaringClass();
+         if (sessionBean.isSingleton() && !sessionBean.getEjbClass().equals(declaringClass))
+         {
+            Lock lock = this.getLockAnnotationOnClass(declaringClass, classLoader);
+            if (lock == null)
+            {
+               lock = new LockImpl(LockType.WRITE);
+            }
+            return annotationClass.cast(lock);
+         }
          return null;
       }
       Lock lock = new LockImpl(lockType);
@@ -141,6 +163,23 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
          return null;
       }
       return concurrentMethod.getLockType();
+   }
+   
+   private Lock getLockAnnotationOnClass(String klass, ClassLoader cl)
+   {
+      if (klass == null)
+      {
+         return null;
+      }
+      try
+      {
+         Class<?> baseClass = cl.loadClass(klass);
+         return baseClass.getAnnotation(Lock.class);
+      }
+      catch (ClassNotFoundException cnfe)
+      {
+         throw new RuntimeException("Error while determing LockType", cnfe);
+      }
    }
 
    /**
