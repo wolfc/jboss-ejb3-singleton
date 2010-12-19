@@ -98,6 +98,6 @@ public class Binding
    @Override
    public String toString()
    {
-      return this.jndiName + "->" + this.description;
+      return this.jndiName + "\t\t->" + this.description;
    }
 }

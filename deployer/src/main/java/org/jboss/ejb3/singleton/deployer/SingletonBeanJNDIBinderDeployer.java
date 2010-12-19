@@ -184,13 +184,15 @@ public class SingletonBeanJNDIBinderDeployer extends AbstractRealDeployerWithInp
       this.createAndAttachJNDIBinerBeanMetaData(unit, jndiBinder, container);
 
       // just print out the bindings
-      log.info("Binding the following entries in JNDI for singleton bean: " + container.getEjbName());
-      log.info("\n\n");
+      StringBuilder sb = new StringBuilder("Binding the following entries in JNDI for singleton bean: ");
+      sb.append(container.getEjbName());
+      sb.append("\n\n");
       for (Binding binding :bindings)
       {
-         log.info(binding);
-         log.info("\n");
+         sb.append(binding);
+         sb.append("\n");
       }
+      log.info(sb.toString());
    }
 
    /**
