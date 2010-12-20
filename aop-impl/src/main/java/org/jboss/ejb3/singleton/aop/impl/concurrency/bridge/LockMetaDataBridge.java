@@ -104,16 +104,27 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
       ConcurrentMethodsMetaData concurrentMethods = sessionBean.getConcurrentMethods();
       if(concurrentMethods == null)
       {
+         // EJB3.1 spec, section 4.8.5.5 specifies special meaning for @Lock annotation
+         // on superclass(es) of bean.
+         // If the method invoked belongs to the superclass of the bean, then pick up
+         // the @Lock annotation from the superclass. If it's absent on the superclass
+         // then by default it's LockType.WRITE
          String declaringClass = method.getDeclaringClass();
-         if (sessionBean.isSingleton() && !sessionBean.getEjbClass().equals(declaringClass))
+         // the check here for @Singleton bean is for optimization, so as to avoid
+         // doing additional checks for non @Singleton beans since only @Singleton beans have explicit @Lock
+         if (sessionBean.isSingleton() && declaringClass != null && !sessionBean.getEjbClass().equals(declaringClass))
          {
-            Lock lock = this.getLockAnnotationOnClass(declaringClass, classLoader);
-            if (lock == null)
+            LockType lockType = sessionBean.getLockType(declaringClass);
+            if (lockType == null)
             {
-               lock = new LockImpl(LockType.WRITE);
+               lockType = LockType.WRITE;
             }
+            Lock lock = new LockImpl(lockType);
             return annotationClass.cast(lock);
          }
+         // the method was invoked on the bean class (and not on super class of bean).
+         // So return null. Later resolveClassAnnotation will pick up the correct bean level
+         // lock semantics (either via the annotation or via metadata)
          return null;
       }
       // get the concurrency method metadata for this named method
@@ -130,16 +141,27 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
       // method "*"
       if (lockType == null)
       {
+         // EJB3.1 spec, section 4.8.5.5 specifies special meaning for @Lock annotation
+         // on superclass(es) of bean.
+         // If the method invoked belongs to the superclass of the bean, then pick up
+         // the @Lock annotation from the superclass. If it's absent on the superclass
+         // then by default it's LockType.WRITE
          String declaringClass = method.getDeclaringClass();
-         if (sessionBean.isSingleton() && !sessionBean.getEjbClass().equals(declaringClass))
+         // the check here for @Singleton bean is for optimization, so as to avoid
+         // doing additional checks for non @Singleton beans since only @Singleton beans have explicit @Lock
+         if (sessionBean.isSingleton() && declaringClass != null && !sessionBean.getEjbClass().equals(declaringClass))
          {
-            Lock lock = this.getLockAnnotationOnClass(declaringClass, classLoader);
-            if (lock == null)
+            lockType = sessionBean.getLockType(declaringClass);
+            if (lockType == null)
             {
-               lock = new LockImpl(LockType.WRITE);
+               lockType = LockType.WRITE;
             }
+            Lock lock = new LockImpl(lockType);
             return annotationClass.cast(lock);
          }
+         // the method was invoked on the bean class (and not on super class of bean).
+         // So return null. Later resolveClassAnnotation will pick up the correct bean level
+         // lock semantics (either via the annotation or via metadata)
          return null;
       }
       Lock lock = new LockImpl(lockType);
@@ -165,23 +187,6 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
       return concurrentMethod.getLockType();
    }
    
-   private Lock getLockAnnotationOnClass(String klass, ClassLoader cl)
-   {
-      if (klass == null)
-      {
-         return null;
-      }
-      try
-      {
-         Class<?> baseClass = cl.loadClass(klass);
-         return baseClass.getAnnotation(Lock.class);
-      }
-      catch (ClassNotFoundException cnfe)
-      {
-         throw new RuntimeException("Error while determing LockType", cnfe);
-      }
-   }
-
    /**
     * 
     * Implementation of {@link Lock} annotation
