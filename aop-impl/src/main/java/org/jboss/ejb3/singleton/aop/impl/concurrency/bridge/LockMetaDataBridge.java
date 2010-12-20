@@ -137,6 +137,10 @@ public class LockMetaDataBridge implements MetaDataBridge<JBossEnterpriseBeanMet
          // get lock type for method "*"
          lockType = getLockTypeApplicableForAllMethods(sessionBean);
       }
+      else
+      {
+         lockType = concurrentMethodMetaData.getLockType();
+      }
       // lock type was not specified for this method nor for the 
       // method "*"
       if (lockType == null)
