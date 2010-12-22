@@ -73,6 +73,15 @@ class ConstructionInvocationContextAdapter extends BaseInvocationContext
          value = tx.value();
       }
 
+      // Note that the container must start a new transaction if the REQUIRED (Required) transaction
+      // attribute is used. This guarantees, for example, that the transactional behavior of the PostConstruct
+      // method is the same regardless of whether it is initialized eagerly at container startup time or as a side
+      // effect of a first client invocation on the Singleton. The REQUIRED transaction attribute value is
+      // allowed so that specification of a transaction attribute for the Singleton PostConstruct/PreDestroy
+      // methods can be defaulted.
+      if(value == TransactionAttributeType.REQUIRED)
+         value = TransactionAttributeType.REQUIRES_NEW;
+
       return value;
    }
 
